@@ -2,7 +2,7 @@
 
 from typing import Final
 
-DOMAIN: Final = "revpi"
+DOMAIN: Final = "ha_revpi"
 
 # Connection settings
 CONF_HOST: Final = "host"
