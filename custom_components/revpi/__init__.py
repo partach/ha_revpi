@@ -14,6 +14,7 @@ from homeassistant.helpers.entity import DeviceInfo
 from .const import (
     CONF_HOST,
     CONF_POLL_INTERVAL,
+    CORE_DEVICE_SUFFIX,
     DEFAULT_HOST,
     DEFAULT_POLL_INTERVAL,
     DOMAIN,
@@ -39,6 +40,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # Create the RevPiModIO connection
     revpi = await _async_create_revpi(hass, host)
 
+    # Each config entry (hub) gets its own coordinator with its own poll loop
     coordinator = RevPiCoordinator(
         hass,
         config_entry=entry,
@@ -53,10 +55,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # Initial data fetch
     await coordinator.async_config_entry_first_refresh()
 
-    # Store coordinator in hass.data (same pattern as ha_felicity)
-    hass.data[DOMAIN][entry.entry_id] = coordinator
+    # Store as hub dict — each entry_id is one hub with its own coordinator
+    hass.data[DOMAIN][entry.entry_id] = {
+        "coordinator": coordinator,
+    }
 
-    # Register devices for each discovered module
+    # Register core device (parent) and IO module devices (children)
     _register_devices(hass, entry, coordinator)
 
     # Forward setup to platforms
@@ -79,7 +83,8 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
 
     if unload_ok:
-        coordinator: RevPiCoordinator = hass.data[DOMAIN].pop(entry.entry_id)
+        hub_data = hass.data[DOMAIN].pop(entry.entry_id)
+        coordinator: RevPiCoordinator = hub_data["coordinator"]
         revpi = coordinator.revpi
         await hass.async_add_executor_job(_cleanup_revpi, revpi)
 
@@ -118,29 +123,74 @@ def _register_devices(
     entry: ConfigEntry,
     coordinator: RevPiCoordinator,
 ) -> None:
-    """Register a HA device for each RevPi module."""
+    """Register core device (parent) and IO module devices (children via via_device)."""
     device_registry = dr.async_get(hass)
-    modules = coordinator.get_modules()
+    core_info = coordinator.core_info
+    core_identifier = (DOMAIN, f"{entry.entry_id}{CORE_DEVICE_SUFFIX}")
 
-    for mod_name, mod_info in modules.items():
+    # Register the core (CPU) module as the parent device
+    if core_info is not None:
+        device_registry.async_get_or_create(
+            config_entry_id=entry.entry_id,
+            identifiers={core_identifier},
+            name=f"RevPi {core_info.name}",
+            manufacturer="KUNBUS GmbH",
+            model=core_info.catalog_nr or "RevPi Core",
+            configuration_url=f"http://{entry.data.get(CONF_HOST, DEFAULT_HOST)}",
+        )
+    else:
+        # Fallback: register a generic core device
+        device_registry.async_get_or_create(
+            config_entry_id=entry.entry_id,
+            identifiers={core_identifier},
+            name=entry.title or "Revolution Pi",
+            manufacturer="KUNBUS GmbH",
+            model="RevPi",
+            configuration_url=f"http://{entry.data.get(CONF_HOST, DEFAULT_HOST)}",
+        )
+
+    # Register IO expansion modules as children linked via via_device
+    for mod_name, mod_info in coordinator.get_io_modules().items():
         device_registry.async_get_or_create(
             config_entry_id=entry.entry_id,
             identifiers={(DOMAIN, f"{entry.entry_id}_{mod_name}")},
             name=f"RevPi {mod_name}",
             manufacturer="KUNBUS GmbH",
             model=mod_info.catalog_nr or "Unknown",
-            configuration_url=f"homeassistant://config/integrations/integration/{entry.entry_id}",
+            via_device=core_identifier,
+        )
+
+    # Also register core module IO devices if the core has IOs (e.g., Connect relay)
+    core_mod = coordinator.get_core_module()
+    if core_mod and (core_mod.inputs or core_mod.outputs):
+        _LOGGER.debug(
+            "Core module %s has %d inputs and %d outputs",
+            core_mod.name,
+            len(core_mod.inputs),
+            len(core_mod.outputs),
         )
 
 
-def get_device_info(entry: ConfigEntry, mod_name: str, mod_info: Any) -> DeviceInfo:
-    """Build a DeviceInfo dict for an entity belonging to a RevPi module."""
+def get_core_device_info(entry: ConfigEntry, coordinator: RevPiCoordinator) -> DeviceInfo:
+    """Build DeviceInfo for the core (parent) device."""
+    core_info = coordinator.core_info
+    return DeviceInfo(
+        identifiers={(DOMAIN, f"{entry.entry_id}{CORE_DEVICE_SUFFIX}")},
+        name=f"RevPi {core_info.name}" if core_info else (entry.title or "Revolution Pi"),
+        manufacturer="KUNBUS GmbH",
+        model=(core_info.catalog_nr if core_info else "RevPi") or "RevPi",
+        configuration_url=f"http://{entry.data.get(CONF_HOST, DEFAULT_HOST)}",
+    )
+
+
+def get_module_device_info(entry: ConfigEntry, mod_name: str, mod_info: Any) -> DeviceInfo:
+    """Build DeviceInfo for an IO module (child device linked to core)."""
     return DeviceInfo(
         identifiers={(DOMAIN, f"{entry.entry_id}_{mod_name}")},
         name=f"RevPi {mod_name}",
         manufacturer="KUNBUS GmbH",
         model=mod_info.catalog_nr or "Unknown",
-        configuration_url=f"homeassistant://config/integrations/integration/{entry.entry_id}",
+        via_device=(DOMAIN, f"{entry.entry_id}{CORE_DEVICE_SUFFIX}"),
     )
 
 
@@ -155,8 +205,11 @@ def _register_services(hass: HomeAssistant) -> None:
         value = call.data["value"]
 
         # Find the coordinator that owns this IO
-        for coordinator in hass.data[DOMAIN].values():
-            if not isinstance(coordinator, RevPiCoordinator):
+        for hub_data in hass.data[DOMAIN].values():
+            if not isinstance(hub_data, dict):
+                continue
+            coordinator = hub_data.get("coordinator")
+            if coordinator is None or not isinstance(coordinator, RevPiCoordinator):
                 continue
             io_info = coordinator.get_io_info(io_name)
             if io_info is not None:

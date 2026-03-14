@@ -26,7 +26,7 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up Revolution Pi switches based on the coordinator data."""
-    coordinator: RevPiCoordinator = hass.data[DOMAIN][entry.entry_id]
+    coordinator: RevPiCoordinator = hass.data[DOMAIN][entry.entry_id]["coordinator"]
     modules = coordinator.get_modules()
 
     entities: list[SwitchEntity] = []

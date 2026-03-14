@@ -10,7 +10,7 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity import DeviceInfo, EntityCategory
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import DOMAIN
+from .const import CORE_DEVICE_SUFFIX, DOMAIN
 from .coordinator import RevPiCoordinator
 
 if TYPE_CHECKING:
@@ -29,13 +29,11 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up Revolution Pi select entities."""
-    coordinator: RevPiCoordinator = hass.data[DOMAIN][entry.entry_id]
+    coordinator: RevPiCoordinator = hass.data[DOMAIN][entry.entry_id]["coordinator"]
 
-    device_info = DeviceInfo(
-        identifiers={(DOMAIN, entry.entry_id)},
-        name=entry.title or "Revolution Pi",
-        manufacturer="KUNBUS GmbH",
-        configuration_url=(f"homeassistant://config/integrations/integration/{entry.entry_id}"),
+    # Attach config selects to the core (parent) device
+    core_device_info = DeviceInfo(
+        identifiers={(DOMAIN, f"{entry.entry_id}{CORE_DEVICE_SUFFIX}")},
     )
 
     entities: list[SelectEntity] = [
@@ -46,7 +44,7 @@ async def async_setup_entry(
             name="Monitor Mode",
             options=MONITOR_MODE_OPTIONS,
             icon="mdi:eye-settings",
-            device_info=device_info,
+            device_info=core_device_info,
         ),
     ]
 

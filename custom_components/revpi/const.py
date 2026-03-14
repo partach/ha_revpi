@@ -38,3 +38,6 @@ CATALOG_RELAY_PREFIXES: Final = ("RevPiRO",)
 CATALOG_CORE_PREFIXES: Final = ("RevPiCore", "RevPiConnect", "RevPiFlat")
 
 PLATFORMS: Final = ["sensor", "switch", "number", "select"]
+
+# Core device identifier suffix
+CORE_DEVICE_SUFFIX: Final = "_core"
