@@ -8,7 +8,7 @@ from homeassistant.core import callback
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import DOMAIN
+from .const import CORE_DEVICE_SUFFIX, DOMAIN, MODULE_TYPE_CORE
 from .coordinator import RevPiCoordinator, RevPiIOInfo
 
 if TYPE_CHECKING:
@@ -33,14 +33,20 @@ class RevPiEntity(CoordinatorEntity[RevPiCoordinator]):
         self._attr_unique_id = f"{entry.entry_id}_{io_info.name}"
         self._attr_name = f"{entry.title} {io_info.name}"
 
-        # Device info — ties entity to the RevPi module device
-        self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, f"{entry.entry_id}_{io_info.device_name}")},
-            name=f"RevPi {io_info.device_name}",
-            manufacturer="KUNBUS GmbH",
-            model=io_info.module_type.upper(),
-            configuration_url=(f"homeassistant://config/integrations/integration/{entry.entry_id}"),
-        )
+        if io_info.module_type == MODULE_TYPE_CORE:
+            # Core module IOs belong directly to the core (parent) device
+            self._attr_device_info = DeviceInfo(
+                identifiers={(DOMAIN, f"{entry.entry_id}{CORE_DEVICE_SUFFIX}")},
+            )
+        else:
+            # IO module entities belong to the child device, linked to core via via_device
+            self._attr_device_info = DeviceInfo(
+                identifiers={(DOMAIN, f"{entry.entry_id}_{io_info.device_name}")},
+                name=f"RevPi {io_info.device_name}",
+                manufacturer="KUNBUS GmbH",
+                model=io_info.module_type.upper(),
+                via_device=(DOMAIN, f"{entry.entry_id}{CORE_DEVICE_SUFFIX}"),
+            )
 
     @property
     def io_value(self):

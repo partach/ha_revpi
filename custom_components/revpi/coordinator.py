@@ -55,8 +55,19 @@ class RevPiModuleInfo:
     position: int
     catalog_nr: str
     module_type: str
+    is_core: bool = False
     inputs: list[RevPiIOInfo] = field(default_factory=list)
     outputs: list[RevPiIOInfo] = field(default_factory=list)
+
+
+@dataclass
+class RevPiCoreInfo:
+    """Describes the Revolution Pi core (CPU) module."""
+
+    name: str
+    position: int
+    catalog_nr: str
+    module_type: str = MODULE_TYPE_CORE
 
 
 @dataclass
@@ -65,6 +76,7 @@ class RevPiData:
 
     modules: dict[str, RevPiModuleInfo] = field(default_factory=dict)
     io_values: dict[str, Any] = field(default_factory=dict)
+    core_values: dict[str, Any] = field(default_factory=dict)
 
 
 def _classify_module(catalog_nr: str) -> str:
@@ -96,7 +108,7 @@ class RevPiCoordinator(DataUpdateCoordinator[RevPiData]):
         super().__init__(
             hass,
             _LOGGER,
-            name=DOMAIN,
+            name=f"{DOMAIN}_{config_entry.entry_id}",
             update_interval=timedelta(seconds=poll_interval),
         )
         self.config_entry = config_entry
@@ -104,11 +116,17 @@ class RevPiCoordinator(DataUpdateCoordinator[RevPiData]):
         self._poll_interval = poll_interval
         self._modules: dict[str, RevPiModuleInfo] = {}
         self._io_map: dict[str, RevPiIOInfo] = {}
+        self._core_info: RevPiCoreInfo | None = None
 
     @property
     def revpi(self) -> Any:
         """Return the revpimodio2 instance."""
         return self._revpi
+
+    @property
+    def core_info(self) -> RevPiCoreInfo | None:
+        """Return the core module info."""
+        return self._core_info
 
     def discover_modules(self) -> dict[str, RevPiModuleInfo]:
         """Discover all connected modules and their IOs (runs in executor)."""
@@ -120,12 +138,23 @@ class RevPiCoordinator(DataUpdateCoordinator[RevPiData]):
             catalog_nr = getattr(device, "catalogNr", "") or ""
             module_type = _classify_module(catalog_nr)
 
+            is_core = module_type == MODULE_TYPE_CORE
+
             mod_info = RevPiModuleInfo(
                 name=device.name,
                 position=device.position,
                 catalog_nr=catalog_nr,
                 module_type=module_type,
+                is_core=is_core,
             )
+
+            if is_core:
+                self._core_info = RevPiCoreInfo(
+                    name=device.name,
+                    position=device.position,
+                    catalog_nr=catalog_nr,
+                    module_type=module_type,
+                )
 
             # Discover inputs
             for io_obj in device.get_inputs():
@@ -171,6 +200,45 @@ class RevPiCoordinator(DataUpdateCoordinator[RevPiData]):
         """Discover modules in the executor."""
         return await self.hass.async_add_executor_job(self.discover_modules)
 
+    def _read_core_values(self) -> dict[str, Any]:
+        """Read core module system values (runs in executor)."""
+        values: dict[str, Any] = {}
+        core = getattr(self._revpi, "core", None)
+        if core is None:
+            return values
+
+        # CPU temperature
+        try:
+            values["cpu_temperature"] = core.temperature
+        except Exception:
+            _LOGGER.debug("Could not read CPU temperature")
+
+        # CPU frequency
+        try:
+            values["cpu_frequency"] = core.frequency
+        except Exception:
+            _LOGGER.debug("Could not read CPU frequency")
+
+        # IO cycle time
+        try:
+            values["io_cycle"] = core.iocycle
+        except Exception:
+            _LOGGER.debug("Could not read IO cycle time")
+
+        # IO error count
+        try:
+            values["io_error_count"] = core.ioerrorcount
+        except Exception:
+            _LOGGER.debug("Could not read IO error count")
+
+        # piControl driver status
+        try:
+            values["picontrol_running"] = core.picontrolrunning
+        except Exception:
+            _LOGGER.debug("Could not read piControl status")
+
+        return values
+
     def _read_all_io(self) -> dict[str, Any]:
         """Read all IO values from the process image (runs in executor)."""
         self._revpi.readprocimg()
@@ -187,10 +255,15 @@ class RevPiCoordinator(DataUpdateCoordinator[RevPiData]):
         """Fetch data from Revolution Pi."""
         try:
             io_values = await self.hass.async_add_executor_job(self._read_all_io)
+            core_values = await self.hass.async_add_executor_job(self._read_core_values)
         except Exception as err:
             raise UpdateFailed(f"Error reading Revolution Pi process image: {err}") from err
 
-        return RevPiData(modules=self._modules, io_values=io_values)
+        return RevPiData(
+            modules=self._modules,
+            io_values=io_values,
+            core_values=core_values,
+        )
 
     def write_io(self, io_name: str, value: Any) -> None:
         """Write a value to an IO point (runs in executor)."""
@@ -209,3 +282,14 @@ class RevPiCoordinator(DataUpdateCoordinator[RevPiData]):
     def get_modules(self) -> dict[str, RevPiModuleInfo]:
         """Return discovered modules."""
         return self._modules
+
+    def get_io_modules(self) -> dict[str, RevPiModuleInfo]:
+        """Return only non-core (IO expansion) modules."""
+        return {k: v for k, v in self._modules.items() if not v.is_core}
+
+    def get_core_module(self) -> RevPiModuleInfo | None:
+        """Return the core module if discovered."""
+        for mod in self._modules.values():
+            if mod.is_core:
+                return mod
+        return None
