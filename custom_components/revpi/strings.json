@@ -1,0 +1,37 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Connect to Revolution Pi",
+        "description": "Set up your Revolution Pi connection.",
+        "data": {
+          "connection_type": "Connection Type",
+          "poll_interval": "Poll interval (seconds)"
+        }
+      },
+      "tcp": {
+        "title": "TCP Connection",
+        "description": "Enter the IP address of the remote Revolution Pi.",
+        "data": {
+          "host": "Host / IP Address"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Failed to connect to Revolution Pi. Ensure revpimodio2 is installed and piCtory is configured.",
+      "unknown": "Unexpected error occurred."
+    },
+    "abort": {
+      "already_configured": "This Revolution Pi is already configured."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "data": {
+          "poll_interval": "Poll interval (seconds)"
+        }
+      }
+    }
+  }
+}
