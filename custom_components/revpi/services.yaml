@@ -1,0 +1,24 @@
+write_io:
+  name: Write IO
+  description: Write a value to a specific IO point on the Revolution Pi.
+  target:
+    entity:
+      integration: revpi
+  fields:
+    io_name:
+      name: IO Name
+      description: The name of the IO point as configured in piCtory (e.g., O_1, AO_1, Relay_1).
+      required: true
+      example: O_1
+      selector:
+        text:
+    value:
+      name: Value
+      description: Value to write. Boolean for digital outputs, integer for analogue.
+      required: true
+      selector:
+        number:
+          mode: box
+          min: -32768
+          max: 32767
+          step: 1

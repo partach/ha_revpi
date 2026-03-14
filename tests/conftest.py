@@ -15,7 +15,7 @@ if TYPE_CHECKING:
 
 @pytest.fixture
 def mock_revpi_io() -> MagicMock:
-    """Create a mock RevPiModIO instance with DIO and AIO modules."""
+    """Create a mock RevPiModIO instance with DIO, AIO, and Relay modules."""
     revpi = MagicMock()
 
     # Create mock digital IO

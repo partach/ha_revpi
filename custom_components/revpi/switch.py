@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 
 from homeassistant.components.switch import SwitchDeviceClass, SwitchEntity
 
-from .const import MODULE_TYPE_DIO, MODULE_TYPE_RELAY
+from .const import DOMAIN, MODULE_TYPE_DIO, MODULE_TYPE_RELAY
 from .entity import RevPiEntity
 
 if TYPE_CHECKING:
@@ -25,8 +25,8 @@ async def async_setup_entry(
     entry: ConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
-    """Set up Revolution Pi switches from a config entry."""
-    coordinator: RevPiCoordinator = entry.runtime_data
+    """Set up Revolution Pi switches based on the coordinator data."""
+    coordinator: RevPiCoordinator = hass.data[DOMAIN][entry.entry_id]
     modules = coordinator.get_modules()
 
     entities: list[SwitchEntity] = []
@@ -37,7 +37,7 @@ async def async_setup_entry(
 
         for io_info in mod_info.outputs:
             if io_info.is_digital:
-                entities.append(RevPiDigitalOutputSwitch(coordinator, io_info, entry.entry_id))
+                entities.append(RevPiDigitalOutputSwitch(coordinator, entry, io_info))
 
     async_add_entities(entities)
 
@@ -48,11 +48,11 @@ class RevPiDigitalOutputSwitch(RevPiEntity, SwitchEntity):
     def __init__(
         self,
         coordinator: RevPiCoordinator,
+        entry: ConfigEntry,
         io_info: RevPiIOInfo,
-        entry_id: str,
     ) -> None:
         """Initialize digital output switch."""
-        super().__init__(coordinator, io_info, entry_id)
+        super().__init__(coordinator, entry, io_info)
 
         if io_info.module_type == MODULE_TYPE_RELAY:
             self._attr_device_class = SwitchDeviceClass.SWITCH

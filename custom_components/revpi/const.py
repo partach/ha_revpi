@@ -4,12 +4,18 @@ from typing import Final
 
 DOMAIN: Final = "revpi"
 
+# Connection settings
 CONF_HOST: Final = "host"
 CONF_PORT: Final = "port"
 CONF_POLL_INTERVAL: Final = "poll_interval"
 
+# Connection types
+CONNECTION_TYPE_LOCAL: Final = "local"
+CONNECTION_TYPE_TCP: Final = "tcp"
+CONF_CONNECTION_TYPE: Final = "connection_type"
+
 DEFAULT_HOST: Final = "localhost"
-DEFAULT_PORT: Final = 0  # 0 = local access (no network)
+DEFAULT_PORT: Final = 0  # 0 = local access
 DEFAULT_POLL_INTERVAL: Final = 1  # seconds
 
 # RevPi IO types (from revpimodio2)
@@ -31,4 +37,4 @@ CATALOG_AIO_PREFIXES: Final = ("RevPiAIO",)
 CATALOG_RELAY_PREFIXES: Final = ("RevPiRO",)
 CATALOG_CORE_PREFIXES: Final = ("RevPiCore", "RevPiConnect", "RevPiFlat")
 
-PLATFORMS: Final = ["sensor", "switch", "number"]
+PLATFORMS: Final = ["sensor", "switch", "number", "select"]

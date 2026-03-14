@@ -99,6 +99,7 @@ class RevPiCoordinator(DataUpdateCoordinator[RevPiData]):
             name=DOMAIN,
             update_interval=timedelta(seconds=poll_interval),
         )
+        self.config_entry = config_entry
         self._revpi = revpi_module
         self._poll_interval = poll_interval
         self._modules: dict[str, RevPiModuleInfo] = {}
@@ -174,7 +175,7 @@ class RevPiCoordinator(DataUpdateCoordinator[RevPiData]):
         """Read all IO values from the process image (runs in executor)."""
         self._revpi.readprocimg()
         values: dict[str, Any] = {}
-        for io_name, _io_info in self._io_map.items():
+        for io_name in self._io_map:
             try:
                 values[io_name] = self._revpi.io[io_name].value
             except Exception:

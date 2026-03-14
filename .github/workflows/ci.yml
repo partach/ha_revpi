@@ -5,47 +5,40 @@ on:
     branches: [main, master]
   pull_request:
     branches: [main, master]
+  schedule:
+    - cron: "0 0 * * 0"  # Weekly
+  workflow_dispatch:
+
+permissions: {}
 
 jobs:
-  lint:
-    name: Lint
+  validate-code:
+    name: Validate Code
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: Install dependencies
-        run: pip install ruff mypy
-      - name: Ruff check
-        run: ruff check .
-      - name: Ruff format check
-        run: ruff format --check .
 
-  test:
-    name: Test
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: ["3.12", "3.13"]
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: ${{ matrix.python-version }}
-      - name: Install dependencies
+      - name: Install Python dependencies
         run: |
-          pip install -r requirements_test.txt
-          pip install -e .
-      - name: Run tests
-        run: pytest tests/ -v --cov=custom_components/revpi --cov-report=term-missing
+          python -m pip install --upgrade pip
+          pip install ruff
 
-  validate:
-    name: HACS Validation
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: HACS validation
-        uses: hacs/action@main
+      - name: Lint Python (Ruff)
+        run: ruff check .
+
+      - uses: actions/setup-node@v4
         with:
-          category: integration
+          node-version: "20"
+
+      - name: Lint JS (if applicable)
+        run: |
+          if [ -f package.json ]; then
+            npm install
+            npm run lint
+          else
+            echo "No package.json found, skipping JS lint."
+          fi

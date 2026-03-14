@@ -11,7 +11,7 @@ from homeassistant.components.sensor import (
     SensorStateClass,
 )
 
-from .const import MODULE_TYPE_AIO
+from .const import DOMAIN, MODULE_TYPE_AIO
 from .entity import RevPiEntity
 
 if TYPE_CHECKING:
@@ -29,8 +29,8 @@ async def async_setup_entry(
     entry: ConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
-    """Set up Revolution Pi sensors from a config entry."""
-    coordinator: RevPiCoordinator = entry.runtime_data
+    """Set up Revolution Pi sensors based on the coordinator data."""
+    coordinator: RevPiCoordinator = hass.data[DOMAIN][entry.entry_id]
     modules = coordinator.get_modules()
 
     entities: list[SensorEntity] = []
@@ -39,15 +39,15 @@ async def async_setup_entry(
         # Create sensors for all inputs
         for io_info in mod_info.inputs:
             if io_info.is_digital:
-                entities.append(RevPiDigitalInputSensor(coordinator, io_info, entry.entry_id))
+                entities.append(RevPiDigitalInputSensor(coordinator, entry, io_info))
             else:
-                entities.append(RevPiAnalogueInputSensor(coordinator, io_info, entry.entry_id))
+                entities.append(RevPiAnalogueInputSensor(coordinator, entry, io_info))
 
-        # Also expose analogue outputs as sensors for monitoring
+        # Also expose analogue outputs as read-only sensors for monitoring
         if mod_info.module_type == MODULE_TYPE_AIO:
             for io_info in mod_info.outputs:
                 if not io_info.is_digital:
-                    entities.append(RevPiAnalogueOutputSensor(coordinator, io_info, entry.entry_id))
+                    entities.append(RevPiAnalogueOutputSensor(coordinator, entry, io_info))
 
     async_add_entities(entities)
 
@@ -62,12 +62,12 @@ class RevPiDigitalInputSensor(RevPiEntity, SensorEntity):
     def __init__(
         self,
         coordinator: RevPiCoordinator,
+        entry: ConfigEntry,
         io_info: RevPiIOInfo,
-        entry_id: str,
     ) -> None:
         """Initialize digital input sensor."""
-        super().__init__(coordinator, io_info, entry_id)
-        self._attr_unique_id = f"{entry_id}_{io_info.name}_sensor"
+        super().__init__(coordinator, entry, io_info)
+        self._attr_unique_id = f"{entry.entry_id}_{io_info.name}_sensor"
 
     @property
     def native_value(self) -> str | None:
@@ -89,12 +89,12 @@ class RevPiAnalogueInputSensor(RevPiEntity, SensorEntity):
     def __init__(
         self,
         coordinator: RevPiCoordinator,
+        entry: ConfigEntry,
         io_info: RevPiIOInfo,
-        entry_id: str,
     ) -> None:
         """Initialize analogue input sensor."""
-        super().__init__(coordinator, io_info, entry_id)
-        self._attr_unique_id = f"{entry_id}_{io_info.name}_sensor"
+        super().__init__(coordinator, entry, io_info)
+        self._attr_unique_id = f"{entry.entry_id}_{io_info.name}_sensor"
 
     @property
     def native_value(self) -> int | float | None:
@@ -113,13 +113,13 @@ class RevPiAnalogueOutputSensor(RevPiEntity, SensorEntity):
     def __init__(
         self,
         coordinator: RevPiCoordinator,
+        entry: ConfigEntry,
         io_info: RevPiIOInfo,
-        entry_id: str,
     ) -> None:
         """Initialize analogue output monitoring sensor."""
-        super().__init__(coordinator, io_info, entry_id)
-        self._attr_unique_id = f"{entry_id}_{io_info.name}_out_sensor"
-        self._attr_name = f"{io_info.name} (output)"
+        super().__init__(coordinator, entry, io_info)
+        self._attr_unique_id = f"{entry.entry_id}_{io_info.name}_out_sensor"
+        self._attr_name = f"{entry.title} {io_info.name} (output)"
 
     @property
     def native_value(self) -> int | float | None:
