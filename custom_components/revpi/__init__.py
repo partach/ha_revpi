@@ -37,8 +37,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     hass.data.setdefault(DOMAIN, {})
 
     host = entry.data.get(CONF_HOST, DEFAULT_HOST)
-    poll_interval = entry.data.get(CONF_POLL_INTERVAL, DEFAULT_POLL_INTERVAL)
-    configrsc = entry.data.get(CONF_CONFIGRSC, DEFAULT_CONFIGRSC)
+    poll_interval = entry.options.get(
+        CONF_POLL_INTERVAL, entry.data.get(CONF_POLL_INTERVAL, DEFAULT_POLL_INTERVAL)
+    )
+    configrsc = entry.options.get(
+        CONF_CONFIGRSC, entry.data.get(CONF_CONFIGRSC, DEFAULT_CONFIGRSC)
+    )
 
     # Create the ModIO connection
     revpi = await _async_create_revpi(hass, host, configrsc)

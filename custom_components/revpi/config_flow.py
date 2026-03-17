@@ -61,7 +61,7 @@ class RevPiConfigFlow(ConfigFlow, domain=DOMAIN):
     @callback
     def async_get_options_flow(config_entry: ConfigEntry) -> RevPiOptionsFlowHandler:
         """Get the options flow handler."""
-        return RevPiOptionsFlowHandler(config_entry)
+        return RevPiOptionsFlowHandler()
 
     async def async_step_user(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         """Handle the initial step — choose connection type."""
@@ -151,14 +151,19 @@ class RevPiConfigFlow(ConfigFlow, domain=DOMAIN):
 class RevPiOptionsFlowHandler(OptionsFlow):
     """Handle options flow for Revolution Pi."""
 
-    def __init__(self, config_entry: ConfigEntry) -> None:
-        """Initialize options flow."""
-        self.config_entry = config_entry
-
     async def async_step_init(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         """Manage the options."""
         if user_input is not None:
             return self.async_create_entry(title="", data=user_input)
+
+        current_poll = self.config_entry.options.get(
+            CONF_POLL_INTERVAL,
+            self.config_entry.data.get(CONF_POLL_INTERVAL, DEFAULT_POLL_INTERVAL),
+        )
+        current_configrsc = self.config_entry.options.get(
+            CONF_CONFIGRSC,
+            self.config_entry.data.get(CONF_CONFIGRSC, DEFAULT_CONFIGRSC),
+        )
 
         return self.async_show_form(
             step_id="init",
@@ -166,15 +171,11 @@ class RevPiOptionsFlowHandler(OptionsFlow):
                 {
                     vol.Optional(
                         CONF_POLL_INTERVAL,
-                        default=self.config_entry.data.get(
-                            CONF_POLL_INTERVAL, DEFAULT_POLL_INTERVAL
-                        ),
+                        default=current_poll,
                     ): vol.All(vol.Coerce(int), vol.Range(min=1, max=60)),
                     vol.Optional(
                         CONF_CONFIGRSC,
-                        default=self.config_entry.data.get(
-                            CONF_CONFIGRSC, DEFAULT_CONFIGRSC
-                        ),
+                        default=current_configrsc,
                     ): str,
                 }
             ),
