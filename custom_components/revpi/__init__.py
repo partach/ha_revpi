@@ -40,7 +40,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     poll_interval = entry.data.get(CONF_POLL_INTERVAL, DEFAULT_POLL_INTERVAL)
     configrsc = entry.data.get(CONF_CONFIGRSC, DEFAULT_CONFIGRSC)
 
-    # Create the RevPiModIO connection
+    # Create the ModIO connection
     revpi = await _async_create_revpi(hass, host, configrsc)
 
     # Each config entry (hub) gets its own coordinator with its own poll loop
@@ -231,7 +231,7 @@ def _register_services(hass: HomeAssistant) -> None:
 async def _async_setup_frontend(hass: HomeAssistant) -> None:
     """Copy frontend card JS to www directory for Lovelace."""
     src = os.path.join(os.path.dirname(__file__), "frontend", "revpi-ports-card.js")
-    dst_dir = hass.config.path("www", "community", "revpi")
+    dst_dir = hass.config.path("www", "community", "ha_revpi")
     dst = os.path.join(dst_dir, "revpi-ports-card.js")
 
     def _copy() -> None:
@@ -246,7 +246,7 @@ async def _async_setup_frontend(hass: HomeAssistant) -> None:
 
     await hass.http.async_register_static_paths(
         [StaticPathConfig(
-            "/local/community/revpi/revpi-ports-card.js",
+            "/local/community/ha_revpi/revpi-ports-card.js",
             dst,
             cache_headers=False,
         )]
