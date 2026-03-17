@@ -112,12 +112,22 @@ async def _async_create_revpi(hass: HomeAssistant, host: str, configrsc: str) ->
         import revpimodio2
 
         if host in (DEFAULT_HOST, "localhost"):
-            return revpimodio2.RevPiModIO(
+            rpi = revpimodio2.RevPiModIO(
                 autorefresh=False,
                 syncoutputs=True,
                 configrsc=configrsc,
             )
-        return revpimodio2.RevPiNetIO(host, autorefresh=False, syncoutputs=True)
+        else:
+            rpi = revpimodio2.RevPiNetIO(host, autorefresh=False, syncoutputs=True)
+
+        # Log synced output values at startup for diagnostics
+        for dev in rpi.device:
+            for io_obj in dev.get_outputs(export=True):
+                _LOGGER.info(
+                    "Startup sync — output %s = %r (length=%s)",
+                    io_obj.name, io_obj.value, io_obj.length,
+                )
+        return rpi
 
     return await hass.async_add_executor_job(_create)
 
@@ -148,6 +158,7 @@ def _register_devices(
             name=core_info.name,
             manufacturer="KUNBUS GmbH",
             model=core_info.catalog_nr or "RevPi Core",
+            hw_version="CORE",
             configuration_url=f"http://{entry.data.get(CONF_HOST, DEFAULT_HOST)}",
         )
     else:
@@ -158,6 +169,7 @@ def _register_devices(
             name=entry.title or "Revolution Pi",
             manufacturer="KUNBUS GmbH",
             model="RevPi",
+            hw_version="CORE",
             configuration_url=f"http://{entry.data.get(CONF_HOST, DEFAULT_HOST)}",
         )
 
@@ -169,6 +181,7 @@ def _register_devices(
             name=mod_name,
             manufacturer="KUNBUS GmbH",
             model=mod_info.catalog_nr or "Unknown",
+            hw_version=mod_info.module_type.upper(),
             via_device=core_identifier,
         )
 
