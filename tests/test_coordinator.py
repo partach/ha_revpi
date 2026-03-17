@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from custom_components.ha_revpi.const import MODULE_TYPE_AIO, MODULE_TYPE_DIO, MODULE_TYPE_RELAY
+from custom_components.ha_revpi.const import MODULE_TYPE_AIO, MODULE_TYPE_CORE, MODULE_TYPE_DIO, MODULE_TYPE_RELAY
 from custom_components.ha_revpi.coordinator import RevPiCoordinator, _classify_module
 
 if TYPE_CHECKING:
@@ -35,6 +35,25 @@ class TestClassifyModule:
     def test_unknown_module(self) -> None:
         assert _classify_module("SomeOther") == "someother"
 
+    # Device name fallback tests (real hardware uses product codes as catalogNr)
+    def test_core_by_device_name_connect(self) -> None:
+        assert _classify_module("PR100xxx", "RevPi Connect 5") == MODULE_TYPE_CORE
+
+    def test_core_by_device_name_core(self) -> None:
+        assert _classify_module("PR100yyy", "RevPi Core S") == MODULE_TYPE_CORE
+
+    def test_core_by_device_name_flat(self) -> None:
+        assert _classify_module("PR100zzz", "RevPi Flat") == MODULE_TYPE_CORE
+
+    def test_dio_by_device_name(self) -> None:
+        assert _classify_module("PR200xxx", "RevPi DIO") == MODULE_TYPE_DIO
+
+    def test_aio_by_device_name(self) -> None:
+        assert _classify_module("PR200yyy", "RevPi AIO") == MODULE_TYPE_AIO
+
+    def test_relay_by_device_name(self) -> None:
+        assert _classify_module("PR200zzz", "RevPi RO") == MODULE_TYPE_RELAY
+
 
 class TestCoordinatorDiscovery:
     """Tests for module discovery."""
@@ -45,6 +64,7 @@ class TestCoordinatorDiscovery:
         coordinator._revpi = mock_revpi_io
         coordinator._modules = {}
         coordinator._io_map = {}
+        coordinator._core_info = None
 
         modules = coordinator.discover_modules()
 
@@ -76,6 +96,7 @@ class TestCoordinatorDiscovery:
         coordinator._revpi = mock_revpi_io
         coordinator._modules = {}
         coordinator._io_map = {}
+        coordinator._core_info = None
 
         coordinator.discover_modules()
 
@@ -90,6 +111,7 @@ class TestCoordinatorDiscovery:
         coordinator._revpi = mock_revpi_io
         coordinator._modules = {}
         coordinator._io_map = {}
+        coordinator._core_info = None
 
         coordinator.discover_modules()
 
@@ -104,6 +126,7 @@ class TestCoordinatorDiscovery:
         coordinator._revpi = mock_revpi_io
         coordinator._modules = {}
         coordinator._io_map = {}
+        coordinator._core_info = None
 
         coordinator.discover_modules()
         values = coordinator._read_all_io()
@@ -120,6 +143,7 @@ class TestCoordinatorDiscovery:
         coordinator._revpi = mock_revpi_io
         coordinator._modules = {}
         coordinator._io_map = {}
+        coordinator._core_info = None
 
         coordinator.discover_modules()
         coordinator.write_io("O_1", True)

@@ -55,8 +55,8 @@ def mock_revpi_io() -> MagicMock:
     ro_device.get_inputs.return_value = []
     ro_device.get_outputs.return_value = [relay_1]
 
-    # Device iteration
-    revpi.device.__iter__ = MagicMock(return_value=iter(["dio01", "aio01", "ro01"]))
+    # Device iteration — revpimodio2 iterates device objects directly
+    revpi.device.__iter__ = MagicMock(return_value=iter([dio_device, aio_device, ro_device]))
     revpi.device.__getitem__ = MagicMock(
         side_effect=lambda k: {"dio01": dio_device, "aio01": aio_device, "ro01": ro_device}[k]
     )
