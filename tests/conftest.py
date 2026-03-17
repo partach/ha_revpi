@@ -7,7 +7,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from custom_components.revpi.const import CONF_HOST, CONF_POLL_INTERVAL
+from custom_components.ha_revpi.const import CONF_HOST, CONF_POLL_INTERVAL
 
 if TYPE_CHECKING:
     from collections.abc import Generator

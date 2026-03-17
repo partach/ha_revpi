@@ -22,7 +22,7 @@ async def test_setup_entry(
     entry = create_config_entry(hass)
 
     with patch(
-        "custom_components.revpi._async_create_revpi",
+        "custom_components.ha_revpi._async_create_revpi",
         return_value=mock_revpi_io,
     ):
         await hass.config_entries.async_setup(entry.entry_id)
@@ -40,7 +40,7 @@ async def test_unload_entry(
     entry = create_config_entry(hass)
 
     with patch(
-        "custom_components.revpi._async_create_revpi",
+        "custom_components.ha_revpi._async_create_revpi",
         return_value=mock_revpi_io,
     ):
         await hass.config_entries.async_setup(entry.entry_id)
