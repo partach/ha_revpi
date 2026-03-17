@@ -40,7 +40,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     poll_interval = entry.data.get(CONF_POLL_INTERVAL, DEFAULT_POLL_INTERVAL)
     configrsc = entry.data.get(CONF_CONFIGRSC, DEFAULT_CONFIGRSC)
 
-    # Create the RevPiModIO connection
+    # Create the ModIO connection
     revpi = await _async_create_revpi(hass, host, configrsc)
 
     # Each config entry (hub) gets its own coordinator with its own poll loop

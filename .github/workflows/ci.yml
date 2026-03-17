@@ -2,23 +2,25 @@ name: CI
 
 on:
   push:
-    branches: [main, master]
+    branches: [ main ]
   pull_request:
-    branches: [main, master]
+    branches: [ main ]
   schedule:
-    - cron: "0 0 * * 0"  # Weekly
+    - cron: '0 0 * * 0'  # Weekly
   workflow_dispatch:
 
 permissions: {}
-
 jobs:
   validate-code:
-    name: Validate Code
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-python@v5
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+            token: ${{ secrets.GH_PAT }}
+            ref: main
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
           python-version: "3.12"
 
@@ -30,11 +32,13 @@ jobs:
       - name: Lint Python (Ruff)
         run: ruff check .
 
-      - uses: actions/setup-node@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
         with:
+          token: ${{ secrets.GH_PAT }}
           node-version: "20"
 
-      - name: Lint JS (if applicable)
+      - name: Lint JavaScript (ESLint)
         run: |
           if [ -f package.json ]; then
             npm install
