@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 from typing import Any
+from urllib.parse import urlparse
 
 import voluptuous as vol
 from homeassistant.config_entries import ConfigEntry, ConfigFlow, ConfigFlowResult, OptionsFlow
@@ -23,6 +24,16 @@ from .const import (
 )
 
 _LOGGER = logging.getLogger(__name__)
+
+
+def _sanitize_host(host: str) -> str:
+    """Strip scheme, port, and path from a host input so bare hostnames work with RevPiNetIO."""
+    host = host.strip().rstrip("/")
+    if "://" in host:
+        parsed = urlparse(host)
+        host = parsed.hostname or host
+    return host
+
 
 STEP_USER_DATA_SCHEMA = vol.Schema(
     {
@@ -103,7 +114,7 @@ class RevPiConfigFlow(ConfigFlow, domain=DOMAIN):
         errors: dict[str, str] = {}
 
         if user_input is not None:
-            host = user_input[CONF_HOST]
+            host = _sanitize_host(user_input[CONF_HOST])
             await self.async_set_unique_id(host)
             self._abort_if_unique_id_configured()
 
