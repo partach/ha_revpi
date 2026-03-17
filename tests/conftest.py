@@ -107,6 +107,8 @@ def _make_io(
     io_type: int,
     value: Any,
     signed: bool = False,
+    export: bool = True,
+    bmk: str = "",
 ) -> MagicMock:
     """Create a mock IO object."""
     io_obj = MagicMock()
@@ -117,4 +119,6 @@ def _make_io(
     io_obj.value = value
     io_obj.signed = signed
     io_obj.defaultvalue = 0
+    io_obj.export = export
+    io_obj.bmk = bmk
     return io_obj

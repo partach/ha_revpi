@@ -52,6 +52,8 @@ class RevPiIOInfo:
     value: Any = None
     signed: bool = False
     default_value: Any = None
+    export: bool = False
+    comment: str = ""
 
 
 @dataclass
@@ -99,6 +101,33 @@ def _is_digital_io(io_obj: Any) -> bool:
     if isinstance(io_obj.value, bool):
         return True
     return False
+
+
+def _make_io_info(
+    io_obj: Any, device_name: str, module_type: str, io_type: int
+) -> RevPiIOInfo:
+    """Create a RevPiIOInfo from a revpimodio2 IO object."""
+    is_digital = _is_digital_io(io_obj)
+    export = getattr(io_obj, "export", False)
+    comment = getattr(io_obj, "bmk", "") or ""
+    _LOGGER.debug(
+        "IO %s: length=%s, value=%r (%s), is_digital=%s, export=%s, comment=%s",
+        io_obj.name, io_obj.length, io_obj.value,
+        type(io_obj.value).__name__, is_digital, export, comment,
+    )
+    return RevPiIOInfo(
+        name=io_obj.name,
+        device_name=device_name,
+        module_type=module_type,
+        io_type=io_type,
+        is_digital=is_digital,
+        address=io_obj.address,
+        length=io_obj.length,
+        signed=getattr(io_obj, "signed", False),
+        default_value=getattr(io_obj, "defaultvalue", None),
+        export=export,
+        comment=comment,
+    )
 
 
 def _classify_module(catalog_nr: str, device_name: str = "") -> str:
@@ -209,47 +238,15 @@ class RevPiCoordinator(DataUpdateCoordinator[RevPiData]):
                     module_type=module_type,
                 )
 
-            # Discover inputs
-            for io_obj in device.get_inputs():
-                is_digital = _is_digital_io(io_obj)
-                _LOGGER.debug(
-                    "IO %s: length=%s, value=%r (%s), is_digital=%s",
-                    io_obj.name, io_obj.length, io_obj.value,
-                    type(io_obj.value).__name__, is_digital,
-                )
-                io_info = RevPiIOInfo(
-                    name=io_obj.name,
-                    device_name=device.name,
-                    module_type=module_type,
-                    io_type=IO_TYPE_INP,
-                    is_digital=is_digital,
-                    address=io_obj.address,
-                    length=io_obj.length,
-                    signed=getattr(io_obj, "signed", False),
-                    default_value=getattr(io_obj, "defaultvalue", None),
-                )
+            # Discover inputs — only piCtory-exported IOs
+            for io_obj in device.get_inputs(export=True):
+                io_info = _make_io_info(io_obj, device.name, module_type, IO_TYPE_INP)
                 mod_info.inputs.append(io_info)
                 io_map[io_obj.name] = io_info
 
-            # Discover outputs
-            for io_obj in device.get_outputs():
-                is_digital = _is_digital_io(io_obj)
-                _LOGGER.debug(
-                    "IO %s: length=%s, value=%r (%s), is_digital=%s",
-                    io_obj.name, io_obj.length, io_obj.value,
-                    type(io_obj.value).__name__, is_digital,
-                )
-                io_info = RevPiIOInfo(
-                    name=io_obj.name,
-                    device_name=device.name,
-                    module_type=module_type,
-                    io_type=IO_TYPE_OUT,
-                    is_digital=is_digital,
-                    address=io_obj.address,
-                    length=io_obj.length,
-                    signed=getattr(io_obj, "signed", False),
-                    default_value=getattr(io_obj, "defaultvalue", None),
-                )
+            # Discover outputs — only piCtory-exported IOs
+            for io_obj in device.get_outputs(export=True):
+                io_info = _make_io_info(io_obj, device.name, module_type, IO_TYPE_OUT)
                 mod_info.outputs.append(io_info)
                 io_map[io_obj.name] = io_info
 
