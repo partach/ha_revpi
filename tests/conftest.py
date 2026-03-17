@@ -55,10 +55,26 @@ def mock_revpi_io() -> MagicMock:
     ro_device.get_inputs.return_value = []
     ro_device.get_outputs.return_value = [relay_1]
 
+    # MIO module — 4 physical digital IOs plus reserved IOs that should be filtered
+    mio_di_1 = _make_io("InputValue_1", address=30, length=0, io_type=300, value=True)
+    mio_di_2 = _make_io("InputValue_2", address=30, length=0, io_type=300, value=False)
+    mio_do_1 = _make_io("OutputValue_1", address=31, length=0, io_type=301, value=False)
+    mio_do_2 = _make_io("OutputValue_2", address=31, length=0, io_type=301, value=True)
+    mio_reserved_1 = _make_io("InputValue_1_reserved", address=32, length=0, io_type=300, value=False)
+    mio_reserved_2 = _make_io("OutputValue_1_reserved", address=33, length=0, io_type=301, value=False)
+    mio_ai_1 = _make_io("InputValue_3", address=34, length=2, io_type=300, value=500)
+
+    mio_device = MagicMock()
+    mio_device.name = "mio01"
+    mio_device.position = 35
+    mio_device.catalogNr = "RevPiMIO"
+    mio_device.get_inputs.return_value = [mio_di_1, mio_di_2, mio_reserved_1, mio_ai_1]
+    mio_device.get_outputs.return_value = [mio_do_1, mio_do_2, mio_reserved_2]
+
     # Device iteration — revpimodio2 iterates device objects directly
-    revpi.device.__iter__ = MagicMock(return_value=iter([dio_device, aio_device, ro_device]))
+    revpi.device.__iter__ = MagicMock(return_value=iter([dio_device, aio_device, ro_device, mio_device]))
     revpi.device.__getitem__ = MagicMock(
-        side_effect=lambda k: {"dio01": dio_device, "aio01": aio_device, "ro01": ro_device}[k]
+        side_effect=lambda k: {"dio01": dio_device, "aio01": aio_device, "ro01": ro_device, "mio01": mio_device}[k]
     )
 
     # IO access
@@ -70,6 +86,13 @@ def mock_revpi_io() -> MagicMock:
         "AI_1": ai_1,
         "AO_1": ao_1,
         "Relay_1": relay_1,
+        "InputValue_1": mio_di_1,
+        "InputValue_2": mio_di_2,
+        "OutputValue_1": mio_do_1,
+        "OutputValue_2": mio_do_2,
+        "InputValue_1_reserved": mio_reserved_1,
+        "OutputValue_1_reserved": mio_reserved_2,
+        "InputValue_3": mio_ai_1,
     }
     revpi.io.__getitem__ = MagicMock(side_effect=lambda k: io_map[k])
 
