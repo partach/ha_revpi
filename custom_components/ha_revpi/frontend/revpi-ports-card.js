@@ -6,12 +6,16 @@ class RevPiPortsCard extends LitElement {
       hass: { type: Object },
       config: { type: Object },
       _deviceEntities: { type: Array },
+      _editingEntity: { type: String },
+      _editValue: { type: String },
     };
   }
 
   constructor() {
     super();
     this._deviceEntities = [];
+    this._editingEntity = null;
+    this._editValue = "";
   }
 
   static getConfigElement() {
@@ -235,18 +239,18 @@ class RevPiPortsCard extends LitElement {
       <ha-card>
         ${this._renderHeader(title, "MIO", "mio")}
         <div class="card-content">
-          ${digitalInputs.length > 0
-            ? this._renderDigitalInputStrip(digitalInputs)
+          ${digitalOutputs.length > 0
+            ? this._renderDigitalOutputTopStrip(digitalOutputs)
             : ""}
           ${this._renderAnalogueConnectorSection(
             analogueOutputs,
             analogueOutSensors,
             analogueInputs
           )}
-          ${digitalOutputs.length > 0
+          ${digitalInputs.length > 0
             ? html`
-                <div class="section-label">DIGITAL OUTPUTS</div>
-                ${this._renderDigitalOutputStrip(digitalOutputs)}
+                <div class="section-label">DIGITAL INPUTS</div>
+                ${this._renderDigitalInputStrip(digitalInputs)}
               `
             : ""}
         </div>
@@ -457,6 +461,82 @@ class RevPiPortsCard extends LitElement {
     `;
   }
 
+  /* ── Digital output top strip (toggleable, numbered) ── */
+
+  _renderDigitalOutputTopStrip(outputs) {
+    // Number sequentially 1..N, show highest first (4, 3, 2, 1)
+    const count = outputs.length;
+    const reversed = [...outputs].reverse();
+    return html`
+      <div class="di-strip">
+        <div class="di-strip-row">
+          ${reversed.map((_eid, idx) => {
+            const displayNum = count - idx;
+            return html`<span class="di-num">${displayNum}</span>`;
+          })}
+        </div>
+        <div class="di-strip-row">
+          ${reversed.map((eid) => {
+            const entity = this.hass.states[eid];
+            const isOn = entity?.state === "on";
+            return html`
+              <span
+                class="di-val clickable ${isOn ? "on" : "off"}"
+                @click=${() => this._toggleSwitch(eid)}
+                >${isOn ? "ON" : "OFF"}</span
+              >
+            `;
+          })}
+        </div>
+      </div>
+    `;
+  }
+
+  /* ── Inline analogue output editing ── */
+
+  _startEdit(entityId) {
+    const entity = this.hass.states[entityId];
+    this._editingEntity = entityId;
+    this._editValue = entity?.state || "0";
+    this.requestUpdate();
+    // Focus the input after render
+    this.updateComplete.then(() => {
+      const input = this.shadowRoot?.querySelector(".conn-edit-input");
+      if (input) {
+        input.focus();
+        input.select();
+      }
+    });
+  }
+
+  async _commitEdit() {
+    if (!this._editingEntity) return;
+    const val = parseFloat(this._editValue);
+    if (!isNaN(val)) {
+      await this.hass.callService("number", "set_value", {
+        entity_id: this._editingEntity,
+        value: val,
+      });
+    }
+    this._editingEntity = null;
+    this._editValue = "";
+  }
+
+  _cancelEdit() {
+    this._editingEntity = null;
+    this._editValue = "";
+  }
+
+  _handleEditKeydown(e) {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      this._commitEdit();
+    } else if (e.key === "Escape") {
+      e.preventDefault();
+      this._cancelEdit();
+    }
+  }
+
   /* ── Analogue connector section (dual-column with pin visuals) ── */
 
   _renderAnalogueConnectorSection(outputs, outputSensors, inputs) {
@@ -525,16 +605,13 @@ class RevPiPortsCard extends LitElement {
   }
 
   _renderConnectorRow(row) {
-    const leftVal = row.left ? this._connectorVal(row.left) : "";
-    const rightVal = row.right ? this._connectorVal(row.right) : "";
-
     return html`
       <div class="connector-row signal-row">
         <span class="conn-label left">${row.left?.label || ""}</span>
-        <span class="conn-value left">${leftVal}</span>
+        ${this._renderConnectorValue(row.left, "left")}
         <span class="conn-pin signal"></span>
         <span class="conn-pin signal"></span>
-        <span class="conn-value right">${rightVal}</span>
+        ${this._renderConnectorValue(row.right, "right")}
         <span class="conn-label right">${row.right?.label || ""}</span>
       </div>
       <div class="connector-row gnd-row">
@@ -546,6 +623,40 @@ class RevPiPortsCard extends LitElement {
         <span class="conn-label right gnd-text">GND</span>
       </div>
     `;
+  }
+
+  _renderConnectorValue(item, side) {
+    if (!item) return html`<span class="conn-value ${side}"></span>`;
+
+    const isEditable = item.eid?.startsWith("number.");
+    const isEditing = this._editingEntity === item.eid;
+    const val = this._connectorVal(item);
+
+    if (isEditing) {
+      return html`
+        <input
+          class="conn-edit-input ${side}"
+          type="number"
+          .value=${this._editValue}
+          @input=${(e) => (this._editValue = e.target.value)}
+          @keydown=${(e) => this._handleEditKeydown(e)}
+          @blur=${() => this._commitEdit()}
+        />
+      `;
+    }
+
+    if (isEditable) {
+      return html`
+        <span
+          class="conn-value ${side} editable"
+          @click=${() => this._startEdit(item.eid)}
+          title="Click to edit"
+          >${val}</span
+        >
+      `;
+    }
+
+    return html`<span class="conn-value ${side}">${val}</span>`;
   }
 
   _connectorVal(item) {
@@ -715,6 +826,14 @@ class RevPiPortsCard extends LitElement {
         border-color: var(--divider-color, #ccc);
         color: var(--secondary-text-color);
       }
+      .di-val.clickable {
+        cursor: pointer;
+        user-select: none;
+        transition: background 0.15s, border-color 0.15s;
+      }
+      .di-val.clickable:hover {
+        background: rgba(232, 101, 10, 0.15);
+      }
 
       /* ── Analogue Connector Section ── */
       .connector-section {
@@ -765,6 +884,40 @@ class RevPiPortsCard extends LitElement {
         margin-right: 2px;
       }
       .conn-value.right {
+        margin-left: 2px;
+      }
+      .conn-value.editable {
+        cursor: pointer;
+        border-color: var(--revpi-orange);
+        transition: background 0.15s;
+      }
+      .conn-value.editable:hover {
+        background: var(--revpi-light-orange);
+      }
+      .conn-edit-input {
+        font-size: 12px;
+        font-weight: 700;
+        padding: 2px 4px;
+        border: 2px solid var(--revpi-orange);
+        border-radius: 3px;
+        text-align: center;
+        background: var(--card-background-color, #fff);
+        min-width: 0;
+        width: 100%;
+        box-sizing: border-box;
+        outline: none;
+        color: var(--primary-text-color);
+        -moz-appearance: textfield;
+      }
+      .conn-edit-input::-webkit-outer-spin-button,
+      .conn-edit-input::-webkit-inner-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+      }
+      .conn-edit-input.left {
+        margin-right: 2px;
+      }
+      .conn-edit-input.right {
         margin-left: 2px;
       }
       .conn-pin.signal {
