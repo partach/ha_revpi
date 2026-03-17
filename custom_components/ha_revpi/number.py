@@ -19,9 +19,10 @@ if TYPE_CHECKING:
 
 _LOGGER = logging.getLogger(__name__)
 
-# RevPi AIO typical ranges
+# RevPi analogue output ranges (millivolts)
 AIO_MIN_VALUE = 0
 AIO_MAX_VALUE = 32767  # 15-bit DAC on RevPi AIO
+MIO_MAX_VALUE = 10000  # RevPi MIO: 0-10V = 0-10000 mV
 
 
 async def async_setup_entry(
@@ -62,11 +63,12 @@ class RevPiAnalogueOutputNumber(RevPiEntity, NumberEntity):
         """Initialize analogue output number."""
         super().__init__(coordinator, entry, io_info)
 
+        max_val = MIO_MAX_VALUE if io_info.module_type == MODULE_TYPE_MIO else AIO_MAX_VALUE
         if io_info.signed:
-            self._attr_native_min_value = -AIO_MAX_VALUE
+            self._attr_native_min_value = -max_val
         else:
             self._attr_native_min_value = AIO_MIN_VALUE
-        self._attr_native_max_value = AIO_MAX_VALUE
+        self._attr_native_max_value = max_val
         self._attr_native_step = 1
 
         # Use box mode for voltage/current-type values (like ha_felicity)
