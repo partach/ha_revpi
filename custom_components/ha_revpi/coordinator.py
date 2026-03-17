@@ -327,8 +327,14 @@ class RevPiCoordinator(DataUpdateCoordinator[RevPiData]):
 
     def write_io(self, io_name: str, value: Any) -> None:
         """Write a value to an IO point (runs in executor)."""
+        _LOGGER.debug(
+            "Writing IO %s = %r (type=%s)", io_name, value, type(value).__name__
+        )
         self._revpi.io[io_name].value = value
         self._revpi.writeprocimg()
+        # Read back to verify the write took effect
+        readback = self._revpi.io[io_name].value
+        _LOGGER.debug("IO %s readback after write: %r", io_name, readback)
 
     async def async_write_io(self, io_name: str, value: Any) -> None:
         """Write a value to an IO point."""
