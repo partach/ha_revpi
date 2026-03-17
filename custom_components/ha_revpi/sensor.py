@@ -13,7 +13,7 @@ from homeassistant.components.sensor import (
 from homeassistant.helpers.entity import DeviceInfo, EntityCategory
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import CORE_DEVICE_SUFFIX, DOMAIN, MODULE_TYPE_AIO, MODULE_TYPE_CORE
+from .const import CORE_DEVICE_SUFFIX, CORE_IO_PREFIXES, DOMAIN, MODULE_TYPE_AIO, MODULE_TYPE_CORE
 from .coordinator import RevPiCoordinator
 from .entity import RevPiEntity
 
@@ -45,6 +45,11 @@ async def async_setup_entry(
 
         # Create sensors for all inputs
         for io_info in mod_info.inputs:
+            # Safety net: skip IOs with known core/system names even if
+            # the module wasn't classified as core (catalogNr mismatch)
+            if io_info.name.startswith(CORE_IO_PREFIXES):
+                _LOGGER.debug("Skipping core IO %s on module %s", io_info.name, mod_info.name)
+                continue
             if io_info.is_digital:
                 entities.append(RevPiDigitalInputSensor(coordinator, entry, io_info))
             else:

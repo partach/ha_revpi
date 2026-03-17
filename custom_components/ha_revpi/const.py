@@ -41,6 +41,25 @@ CATALOG_AIO_PREFIXES: Final = ("RevPiAIO",)
 CATALOG_RELAY_PREFIXES: Final = ("RevPiRO",)
 CATALOG_CORE_PREFIXES: Final = ("RevPiCore", "RevPiConnect", "RevPiFlat")
 
+# Device name keywords used as fallback when catalogNr doesn't match
+# (on real hardware catalogNr is often a product code like "PR100xxx")
+CORE_NAME_KEYWORDS: Final = ("core", "connect", "flat")
+DIO_NAME_KEYWORDS: Final = ("dio", " di", " do")
+AIO_NAME_KEYWORDS: Final = ("aio",)
+RELAY_NAME_KEYWORDS: Final = (" ro",)
+
+# Known core/system IO name prefixes — these should never be exposed as mV sensors
+CORE_IO_PREFIXES: Final = (
+    "Core_",
+    "RevPiStatus",
+    "RevPiIOCycle",
+    "RevPiLED",
+    "RS485ErrorCnt",
+    "RS485ErrorLimit",
+    "RevPiOutput",
+    "RevPiInput",
+)
+
 PLATFORMS: Final = ["sensor", "switch", "number", "select"]
 
 # Core device identifier suffix

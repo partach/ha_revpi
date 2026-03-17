@@ -10,11 +10,14 @@ from typing import TYPE_CHECKING, Any
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import (
+    AIO_NAME_KEYWORDS,
     CATALOG_AIO_PREFIXES,
     CATALOG_CORE_PREFIXES,
     CATALOG_DIO_PREFIXES,
     CATALOG_RELAY_PREFIXES,
+    CORE_NAME_KEYWORDS,
     DEFAULT_POLL_INTERVAL,
+    DIO_NAME_KEYWORDS,
     DOMAIN,
     IO_TYPE_INP,
     IO_TYPE_OUT,
@@ -22,6 +25,7 @@ from .const import (
     MODULE_TYPE_CORE,
     MODULE_TYPE_DIO,
     MODULE_TYPE_RELAY,
+    RELAY_NAME_KEYWORDS,
 )
 
 if TYPE_CHECKING:
@@ -79,8 +83,14 @@ class RevPiData:
     core_values: dict[str, Any] = field(default_factory=dict)
 
 
-def _classify_module(catalog_nr: str) -> str:
-    """Classify a module by its catalog number."""
+def _classify_module(catalog_nr: str, device_name: str = "") -> str:
+    """Classify a module by its catalog number, falling back to device name.
+
+    On real hardware, catalogNr is often a product code (e.g. 'PR100xxx')
+    that doesn't match the expected prefixes. We fall back to checking
+    the piCtory device name (e.g. 'RevPi Connect 5').
+    """
+    # First try catalog number (works in tests and some firmware versions)
     if catalog_nr.startswith(CATALOG_DIO_PREFIXES):
         return MODULE_TYPE_DIO
     if catalog_nr.startswith(CATALOG_AIO_PREFIXES):
@@ -89,7 +99,23 @@ def _classify_module(catalog_nr: str) -> str:
         return MODULE_TYPE_RELAY
     if catalog_nr.startswith(CATALOG_CORE_PREFIXES):
         return MODULE_TYPE_CORE
-    return catalog_nr.lower()
+
+    # Fallback: check device name (handles spaces, e.g. "RevPi Connect 5")
+    name_lower = device_name.lower()
+    # Check core BEFORE DIO/AIO to avoid "RevPi Connect" matching " co" etc.
+    if any(kw in name_lower for kw in CORE_NAME_KEYWORDS):
+        return MODULE_TYPE_CORE
+    if any(kw in name_lower for kw in DIO_NAME_KEYWORDS):
+        return MODULE_TYPE_DIO
+    if any(kw in name_lower for kw in AIO_NAME_KEYWORDS):
+        return MODULE_TYPE_AIO
+    if any(kw in name_lower for kw in RELAY_NAME_KEYWORDS):
+        return MODULE_TYPE_RELAY
+
+    _LOGGER.warning(
+        "Unknown module type: catalog_nr=%s, name=%s", catalog_nr, device_name
+    )
+    return catalog_nr.lower() if catalog_nr else device_name.lower()
 
 
 class RevPiCoordinator(DataUpdateCoordinator[RevPiData]):
@@ -136,7 +162,11 @@ class RevPiCoordinator(DataUpdateCoordinator[RevPiData]):
         for dev in self._revpi.device:
             device = dev
             catalog_nr = getattr(device, "catalogNr", "") or ""
-            module_type = _classify_module(catalog_nr)
+            module_type = _classify_module(catalog_nr, device.name)
+            _LOGGER.info(
+                "Module %s (pos=%s, catalog=%s) classified as %s",
+                device.name, device.position, catalog_nr, module_type,
+            )
 
             is_core = module_type == MODULE_TYPE_CORE
 
