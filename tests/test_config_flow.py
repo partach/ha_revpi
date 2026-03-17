@@ -8,7 +8,7 @@ from unittest.mock import MagicMock, patch
 from homeassistant import config_entries
 from homeassistant.data_entry_flow import FlowResultType
 
-from custom_components.revpi.const import (
+from custom_components.ha_revpi.const import (
     CONF_CONNECTION_TYPE,
     CONF_HOST,
     CONF_POLL_INTERVAL,
@@ -77,7 +77,7 @@ async def test_form_tcp_step(
 async def test_form_connection_failure(hass: HomeAssistant) -> None:
     """Test connection failure shows error."""
     with patch(
-        "custom_components.revpi.config_flow.RevPiConfigFlow._test_connection",
+        "custom_components.ha_revpi.config_flow.RevPiConfigFlow._test_connection",
         return_value=False,
     ):
         result = await hass.config_entries.flow.async_init(

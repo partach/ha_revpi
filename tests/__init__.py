@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from custom_components.revpi.const import CONF_HOST, CONF_POLL_INTERVAL, DOMAIN
+from custom_components.ha_revpi.const import CONF_HOST, CONF_POLL_INTERVAL, DOMAIN
 
 if TYPE_CHECKING:
     from homeassistant.core import HomeAssistant
