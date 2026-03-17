@@ -11,10 +11,12 @@ from homeassistant.const import CONF_HOST
 from homeassistant.core import callback
 
 from .const import (
+    CONF_CONFIGRSC,
     CONF_CONNECTION_TYPE,
     CONF_POLL_INTERVAL,
     CONNECTION_TYPE_LOCAL,
     CONNECTION_TYPE_TCP,
+    DEFAULT_CONFIGRSC,
     DEFAULT_HOST,
     DEFAULT_POLL_INTERVAL,
     DOMAIN,
@@ -30,6 +32,7 @@ STEP_USER_DATA_SCHEMA = vol.Schema(
                 CONNECTION_TYPE_TCP: "TCP/IP (remote RevPi)",
             }
         ),
+        vol.Optional(CONF_CONFIGRSC, default=DEFAULT_CONFIGRSC): str,
         vol.Optional(CONF_POLL_INTERVAL, default=DEFAULT_POLL_INTERVAL): vol.All(
             vol.Coerce(int), vol.Range(min=1, max=60)
         ),
@@ -52,6 +55,7 @@ class RevPiConfigFlow(ConfigFlow, domain=DOMAIN):
         """Initialize the config flow."""
         self._connection_type: str = CONNECTION_TYPE_LOCAL
         self._poll_interval: int = DEFAULT_POLL_INTERVAL
+        self._configrsc: str = DEFAULT_CONFIGRSC
 
     @staticmethod
     @callback
@@ -66,6 +70,7 @@ class RevPiConfigFlow(ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             self._connection_type = user_input[CONF_CONNECTION_TYPE]
             self._poll_interval = user_input.get(CONF_POLL_INTERVAL, DEFAULT_POLL_INTERVAL)
+            self._configrsc = user_input.get(CONF_CONFIGRSC, DEFAULT_CONFIGRSC)
 
             if self._connection_type == CONNECTION_TYPE_TCP:
                 return await self.async_step_tcp()
@@ -75,13 +80,14 @@ class RevPiConfigFlow(ConfigFlow, domain=DOMAIN):
             await self.async_set_unique_id(host)
             self._abort_if_unique_id_configured()
 
-            if await self._test_connection(host):
+            if await self._test_connection(host, self._configrsc):
                 return self.async_create_entry(
                     title="Revolution Pi (local)",
                     data={
                         CONF_HOST: host,
                         CONF_CONNECTION_TYPE: CONNECTION_TYPE_LOCAL,
                         CONF_POLL_INTERVAL: self._poll_interval,
+                        CONF_CONFIGRSC: self._configrsc,
                     },
                 )
             errors["base"] = "cannot_connect"
@@ -101,13 +107,14 @@ class RevPiConfigFlow(ConfigFlow, domain=DOMAIN):
             await self.async_set_unique_id(host)
             self._abort_if_unique_id_configured()
 
-            if await self._test_connection(host):
+            if await self._test_connection(host, self._configrsc):
                 return self.async_create_entry(
                     title=f"Revolution Pi ({host})",
                     data={
                         CONF_HOST: host,
                         CONF_CONNECTION_TYPE: CONNECTION_TYPE_TCP,
                         CONF_POLL_INTERVAL: self._poll_interval,
+                        CONF_CONFIGRSC: self._configrsc,
                     },
                 )
             errors["base"] = "cannot_connect"
@@ -118,7 +125,7 @@ class RevPiConfigFlow(ConfigFlow, domain=DOMAIN):
             errors=errors,
         )
 
-    async def _test_connection(self, host: str) -> bool:
+    async def _test_connection(self, host: str, configrsc: str) -> bool:
         """Test if we can connect to the Revolution Pi."""
         try:
 
@@ -126,7 +133,10 @@ class RevPiConfigFlow(ConfigFlow, domain=DOMAIN):
                 import revpimodio2
 
                 if host in (DEFAULT_HOST, "localhost"):
-                    rpi = revpimodio2.RevPiModIO(autorefresh=False)
+                    rpi = revpimodio2.RevPiModIO(
+                        autorefresh=False,
+                        configrsc=configrsc,
+                    )
                 else:
                     rpi = revpimodio2.RevPiNetIO(host, autorefresh=False)
                 rpi.exit()
@@ -160,6 +170,12 @@ class RevPiOptionsFlowHandler(OptionsFlow):
                             CONF_POLL_INTERVAL, DEFAULT_POLL_INTERVAL
                         ),
                     ): vol.All(vol.Coerce(int), vol.Range(min=1, max=60)),
+                    vol.Optional(
+                        CONF_CONFIGRSC,
+                        default=self.config_entry.data.get(
+                            CONF_CONFIGRSC, DEFAULT_CONFIGRSC
+                        ),
+                    ): str,
                 }
             ),
         )

@@ -18,6 +18,10 @@ DEFAULT_HOST: Final = "localhost"
 DEFAULT_PORT: Final = 0  # 0 = local access
 DEFAULT_POLL_INTERVAL: Final = 1  # seconds
 
+# piCtory configuration file path
+CONF_CONFIGRSC: Final = "configrsc"
+DEFAULT_CONFIGRSC: Final = "/var/www/revpi/pictory/projects/config.rsc"
+
 # RevPi IO types (from revpimodio2)
 IO_TYPE_INP: Final = 300
 IO_TYPE_OUT: Final = 301
