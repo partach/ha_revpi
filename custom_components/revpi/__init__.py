@@ -141,7 +141,7 @@ def _register_devices(
         device_registry.async_get_or_create(
             config_entry_id=entry.entry_id,
             identifiers={core_identifier},
-            name=f"RevPi {core_info.name}",
+            name=core_info.name,
             manufacturer="KUNBUS GmbH",
             model=core_info.catalog_nr or "RevPi Core",
             configuration_url=f"http://{entry.data.get(CONF_HOST, DEFAULT_HOST)}",
@@ -162,7 +162,7 @@ def _register_devices(
         device_registry.async_get_or_create(
             config_entry_id=entry.entry_id,
             identifiers={(DOMAIN, f"{entry.entry_id}_{mod_name}")},
-            name=f"RevPi {mod_name}",
+            name=mod_name,
             manufacturer="KUNBUS GmbH",
             model=mod_info.catalog_nr or "Unknown",
             via_device=core_identifier,
@@ -184,7 +184,7 @@ def get_core_device_info(entry: ConfigEntry, coordinator: RevPiCoordinator) -> D
     core_info = coordinator.core_info
     return DeviceInfo(
         identifiers={(DOMAIN, f"{entry.entry_id}{CORE_DEVICE_SUFFIX}")},
-        name=f"RevPi {core_info.name}" if core_info else (entry.title or "Revolution Pi"),
+        name=core_info.name if core_info else (entry.title or "Revolution Pi"),
         manufacturer="KUNBUS GmbH",
         model=(core_info.catalog_nr if core_info else "RevPi") or "RevPi",
         configuration_url=f"http://{entry.data.get(CONF_HOST, DEFAULT_HOST)}",
@@ -195,7 +195,7 @@ def get_module_device_info(entry: ConfigEntry, mod_name: str, mod_info: Any) -> 
     """Build DeviceInfo for an IO module (child device linked to core)."""
     return DeviceInfo(
         identifiers={(DOMAIN, f"{entry.entry_id}_{mod_name}")},
-        name=f"RevPi {mod_name}",
+        name=mod_name,
         manufacturer="KUNBUS GmbH",
         model=mod_info.catalog_nr or "Unknown",
         via_device=(DOMAIN, f"{entry.entry_id}{CORE_DEVICE_SUFFIX}"),

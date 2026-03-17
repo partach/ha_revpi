@@ -13,7 +13,7 @@ from homeassistant.components.sensor import (
 from homeassistant.helpers.entity import DeviceInfo, EntityCategory
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import CORE_DEVICE_SUFFIX, DOMAIN, MODULE_TYPE_AIO
+from .const import CORE_DEVICE_SUFFIX, DOMAIN, MODULE_TYPE_AIO, MODULE_TYPE_CORE
 from .coordinator import RevPiCoordinator
 from .entity import RevPiEntity
 
@@ -39,6 +39,10 @@ async def async_setup_entry(
     entities: list[SensorEntity] = []
 
     for mod_info in modules.values():
+        # Skip core module IOs — they are handled by _add_core_sensors() below
+        if mod_info.module_type == MODULE_TYPE_CORE:
+            continue
+
         # Create sensors for all inputs
         for io_info in mod_info.inputs:
             if io_info.is_digital:
