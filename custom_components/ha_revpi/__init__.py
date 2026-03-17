@@ -158,6 +158,7 @@ def _register_devices(
             name=core_info.name,
             manufacturer="KUNBUS GmbH",
             model=core_info.catalog_nr or "RevPi Core",
+            hw_version="CORE",
             configuration_url=f"http://{entry.data.get(CONF_HOST, DEFAULT_HOST)}",
         )
     else:
@@ -168,6 +169,7 @@ def _register_devices(
             name=entry.title or "Revolution Pi",
             manufacturer="KUNBUS GmbH",
             model="RevPi",
+            hw_version="CORE",
             configuration_url=f"http://{entry.data.get(CONF_HOST, DEFAULT_HOST)}",
         )
 
@@ -179,6 +181,7 @@ def _register_devices(
             name=mod_name,
             manufacturer="KUNBUS GmbH",
             model=mod_info.catalog_nr or "Unknown",
+            hw_version=mod_info.module_type.upper(),
             via_device=core_identifier,
         )
 
