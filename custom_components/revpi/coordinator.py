@@ -134,7 +134,7 @@ class RevPiCoordinator(DataUpdateCoordinator[RevPiData]):
         io_map: dict[str, RevPiIOInfo] = {}
 
         for dev in self._revpi.device:
-            device = self._revpi.device[dev]
+            device = dev
             catalog_nr = getattr(device, "catalogNr", "") or ""
             module_type = _classify_module(catalog_nr)
 
