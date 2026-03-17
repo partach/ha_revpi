@@ -238,12 +238,16 @@ class RevPiPortsCard extends LitElement {
     const digitalOutputs = this._getDigitalOutputs();
     const digitalIOs = this._buildMIODigitalIOs(digitalInputs, digitalOutputs);
 
+    // MIO has 4 digital IOs that can be configured as input or output (or mix)
+    // Merge them into a single list reflecting the physical pin layout
+    const allDigitalIOs = this._mergeDigitalIOs(digitalInputs, digitalOutputs);
+
     return html`
       <ha-card>
         ${this._renderHeader(title, "MIO", "mio")}
         <div class="card-content">
-          ${digitalIOs.length > 0
-            ? this._renderMIODigitalStrip(digitalIOs)
+          ${allDigitalIOs.length > 0
+            ? this._renderMIODigitalStrip(allDigitalIOs)
             : ""}
           ${this._renderAnalogueConnectorSection(
             analogueOutputs,
@@ -494,6 +498,63 @@ class RevPiPortsCard extends LitElement {
   /* ══════════════════════════════════════════════
      Shared sub-renderers
      ══════════════════════════════════════════════ */
+
+  /* ── MIO: Merge digital inputs and outputs into unified list ── */
+
+  _mergeDigitalIOs(digitalInputs, digitalOutputs) {
+    // Build a combined list sorted by IO number, tagged with type
+    const ios = [];
+    digitalInputs.forEach((eid) => {
+      ios.push({ eid, num: this._extractNumber(eid), type: "input" });
+    });
+    digitalOutputs.forEach((eid) => {
+      ios.push({ eid, num: this._extractNumber(eid), type: "output" });
+    });
+    ios.sort((a, b) => a.num - b.num);
+    return ios;
+  }
+
+  /* ── MIO: Unified digital IO strip (inputs read-only, outputs toggleable) ── */
+
+  _renderMIODigitalStrip(ios) {
+    const count = ios.length;
+    const reversed = [...ios].reverse();
+    return html`
+      <div class="di-strip">
+        <div class="di-strip-row">
+          ${reversed.map((_io, idx) => {
+            const displayNum = count - idx;
+            return html`<span class="di-num">${displayNum}</span>`;
+          })}
+        </div>
+        <div class="di-strip-row">
+          ${reversed.map((io) => {
+            const entity = this.hass.states[io.eid];
+            if (io.type === "output") {
+              const isOn = entity?.state === "on";
+              return html`
+                <span
+                  class="di-val clickable ${isOn ? "on" : "off"}"
+                  @click=${() => this._toggleSwitch(io.eid)}
+                  title="Output – click to toggle"
+                  >${isOn ? "ON" : "OFF"}</span
+                >
+              `;
+            }
+            // Input – read-only
+            const on = entity && this._isOn(entity.state);
+            return html`
+              <span
+                class="di-val ${on ? "on" : "off"}"
+                title="Input"
+                >${entity?.state || "?"}</span
+              >
+            `;
+          })}
+        </div>
+      </div>
+    `;
+  }
 
   /* ── Digital input strip (horizontal row, numbered) ── */
 
