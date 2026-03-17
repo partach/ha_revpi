@@ -280,7 +280,7 @@ class RevPiPortsCardEditor extends LitElement {
   }
 
   render() {
-    if (!this.hass) return html``;
+    if (!this.hass || !this._config) return html``;
 
     return html`
       <style>
@@ -303,7 +303,7 @@ class RevPiPortsCardEditor extends LitElement {
       <div class="config-row">
         <ha-selector
           .hass=${this.hass}
-          .selector=${{ device: { integration: "revpi" } }}
+          .selector=${{ device: { integration: "ha_revpi" } }}
           .value=${this._config.device_id || ""}
           @value-changed=${(e) =>
             this._valueChanged("device_id", e.detail.value)}
