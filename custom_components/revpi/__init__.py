@@ -12,9 +12,11 @@ from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.entity import DeviceInfo
 
 from .const import (
+    CONF_CONFIGRSC,
     CONF_HOST,
     CONF_POLL_INTERVAL,
     CORE_DEVICE_SUFFIX,
+    DEFAULT_CONFIGRSC,
     DEFAULT_HOST,
     DEFAULT_POLL_INTERVAL,
     DOMAIN,
@@ -36,9 +38,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     host = entry.data.get(CONF_HOST, DEFAULT_HOST)
     poll_interval = entry.data.get(CONF_POLL_INTERVAL, DEFAULT_POLL_INTERVAL)
+    configrsc = entry.data.get(CONF_CONFIGRSC, DEFAULT_CONFIGRSC)
 
     # Create the RevPiModIO connection
-    revpi = await _async_create_revpi(hass, host)
+    revpi = await _async_create_revpi(hass, host, configrsc)
 
     # Each config entry (hub) gets its own coordinator with its own poll loop
     coordinator = RevPiCoordinator(
@@ -97,14 +100,18 @@ async def update_listener(hass: HomeAssistant, entry: ConfigEntry) -> None:
     await hass.config_entries.async_reload(entry.entry_id)
 
 
-async def _async_create_revpi(hass: HomeAssistant, host: str) -> Any:
+async def _async_create_revpi(hass: HomeAssistant, host: str, configrsc: str) -> Any:
     """Create and return a RevPiModIO2 instance."""
 
     def _create() -> Any:
         import revpimodio2
 
         if host in (DEFAULT_HOST, "localhost"):
-            return revpimodio2.RevPiModIO(autorefresh=False, syncoutputs=True)
+            return revpimodio2.RevPiModIO(
+                autorefresh=False,
+                syncoutputs=True,
+                configrsc=configrsc,
+            )
         return revpimodio2.RevPiNetIO(host, autorefresh=False, syncoutputs=True)
 
     return await hass.async_add_executor_job(_create)
