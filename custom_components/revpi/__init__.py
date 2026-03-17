@@ -72,8 +72,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # Register services
     _register_services(hass)
 
-    # Copy frontend resources
-    await _async_setup_frontend(hass)
+    # Install and register frontend resources
+    await _async_install_frontend_resource(hass)
+    await _async_register_card(hass)
 
     # Listen for option changes
     entry.async_on_unload(entry.add_update_listener(update_listener))
@@ -228,26 +229,56 @@ def _register_services(hass: HomeAssistant) -> None:
     hass.services.async_register(DOMAIN, "write_io", handle_write_io)
 
 
-async def _async_setup_frontend(hass: HomeAssistant) -> None:
-    """Copy frontend card JS to www directory for Lovelace."""
-    src = os.path.join(os.path.dirname(__file__), "frontend", "revpi-ports-card.js")
-    dst_dir = hass.config.path("www", "community", "revpi")
-    dst = os.path.join(dst_dir, "revpi-ports-card.js")
+async def _async_install_frontend_resource(hass: HomeAssistant) -> None:
+    """Ensure the frontend JS file is copied to the www/community folder."""
 
-    def _copy() -> None:
-        os.makedirs(dst_dir, exist_ok=True)
-        shutil.copy2(src, dst)
+    def _install() -> None:
+        target_dir = hass.config.path("www", "community", DOMAIN)
+        try:
+            if not os.path.exists(target_dir):
+                _LOGGER.debug("Creating directory: %s", target_dir)
+                os.makedirs(target_dir, exist_ok=True)
+            js_file = "revpi-ports-card.js"
+            source_path = os.path.join(
+                os.path.dirname(__file__), "frontend", js_file
+            )
+            target_path = os.path.join(target_dir, js_file)
+            if os.path.exists(source_path):
+                shutil.copy2(source_path, target_path)
+                _LOGGER.info("Updated frontend resource: %s", target_path)
+            else:
+                _LOGGER.warning("Frontend source file missing at %s", source_path)
+        except Exception as err:
+            _LOGGER.error("Failed to install frontend resource: %s", err)
 
-    if not os.path.exists(dst) or os.path.getmtime(src) > os.path.getmtime(dst):
-        await hass.async_add_executor_job(_copy)
+    await hass.async_add_executor_job(_install)
 
-    # Register as a Lovelace resource
-    from homeassistant.components.http import StaticPathConfig
 
-    await hass.http.async_register_static_paths(
-        [StaticPathConfig(
-            "/local/community/revpi/revpi-ports-card.js",
-            dst,
-            cache_headers=False,
-        )]
+async def _async_register_card(hass: HomeAssistant) -> None:
+    """Register the custom card as a Lovelace resource."""
+    lovelace_data = hass.data.get("lovelace")
+    if not lovelace_data:
+        _LOGGER.debug("Unable to get lovelace data")
+        return
+
+    resources = lovelace_data.resources
+    if not resources:
+        _LOGGER.debug("Unable to get lovelace resources")
+        return
+
+    if not resources.loaded:
+        await resources.async_load()
+
+    card_url = f"/hacsfiles/{DOMAIN}/revpi-ports-card.js"
+    already_registered = any(
+        item["url"] == card_url for item in resources.async_items()
     )
+    if already_registered:
+        _LOGGER.debug("Card already registered: %s", card_url)
+        return
+
+    await resources.async_create_item({
+        "res_type": "module",
+        "url": card_url,
+    })
+    _LOGGER.debug("Card registered: %s", card_url)
