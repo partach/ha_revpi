@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 
 from homeassistant.components.switch import SwitchDeviceClass, SwitchEntity
 
-from .const import DOMAIN, MODULE_TYPE_DIO, MODULE_TYPE_RELAY
+from .const import DOMAIN, MODULE_TYPE_DIO, MODULE_TYPE_MIO, MODULE_TYPE_RELAY
 from .entity import RevPiEntity
 
 if TYPE_CHECKING:
@@ -32,7 +32,7 @@ async def async_setup_entry(
     entities: list[SwitchEntity] = []
 
     for mod_info in modules.values():
-        if mod_info.module_type not in (MODULE_TYPE_DIO, MODULE_TYPE_RELAY):
+        if mod_info.module_type not in (MODULE_TYPE_DIO, MODULE_TYPE_MIO, MODULE_TYPE_RELAY):
             continue
 
         for io_info in mod_info.outputs:

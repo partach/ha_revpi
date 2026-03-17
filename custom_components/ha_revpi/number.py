@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 from homeassistant.components.number import NumberDeviceClass, NumberEntity, NumberMode
 from homeassistant.core import HomeAssistant, callback
 
-from .const import DOMAIN, MODULE_TYPE_AIO
+from .const import DOMAIN, MODULE_TYPE_AIO, MODULE_TYPE_MIO
 from .entity import RevPiEntity
 
 if TYPE_CHECKING:
@@ -36,7 +36,7 @@ async def async_setup_entry(
     entities: list[NumberEntity] = []
 
     for mod_info in modules.values():
-        if mod_info.module_type != MODULE_TYPE_AIO:
+        if mod_info.module_type not in (MODULE_TYPE_AIO, MODULE_TYPE_MIO):
             continue
 
         for io_info in mod_info.outputs:

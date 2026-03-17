@@ -14,6 +14,7 @@ from .const import (
     CATALOG_AIO_PREFIXES,
     CATALOG_CORE_PREFIXES,
     CATALOG_DIO_PREFIXES,
+    CATALOG_MIO_PREFIXES,
     CATALOG_RELAY_PREFIXES,
     CORE_NAME_KEYWORDS,
     DEFAULT_POLL_INTERVAL,
@@ -21,9 +22,11 @@ from .const import (
     DOMAIN,
     IO_TYPE_INP,
     IO_TYPE_OUT,
+    MIO_NAME_KEYWORDS,
     MODULE_TYPE_AIO,
     MODULE_TYPE_CORE,
     MODULE_TYPE_DIO,
+    MODULE_TYPE_MIO,
     MODULE_TYPE_RELAY,
     RELAY_NAME_KEYWORDS,
 )
@@ -93,6 +96,8 @@ def _classify_module(catalog_nr: str, device_name: str = "") -> str:
     # First try catalog number (works in tests and some firmware versions)
     if catalog_nr.startswith(CATALOG_DIO_PREFIXES):
         return MODULE_TYPE_DIO
+    if catalog_nr.startswith(CATALOG_MIO_PREFIXES):
+        return MODULE_TYPE_MIO
     if catalog_nr.startswith(CATALOG_AIO_PREFIXES):
         return MODULE_TYPE_AIO
     if catalog_nr.startswith(CATALOG_RELAY_PREFIXES):
@@ -105,6 +110,9 @@ def _classify_module(catalog_nr: str, device_name: str = "") -> str:
     # Check core BEFORE DIO/AIO to avoid "RevPi Connect" matching " co" etc.
     if any(kw in name_lower for kw in CORE_NAME_KEYWORDS):
         return MODULE_TYPE_CORE
+    # Check MIO before AIO (MIO contains "io" but is its own type)
+    if any(kw in name_lower for kw in MIO_NAME_KEYWORDS):
+        return MODULE_TYPE_MIO
     if any(kw in name_lower for kw in DIO_NAME_KEYWORDS):
         return MODULE_TYPE_DIO
     if any(kw in name_lower for kw in AIO_NAME_KEYWORDS):
