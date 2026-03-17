@@ -103,6 +103,12 @@ def _is_digital_io(io_obj: Any) -> bool:
     return False
 
 
+def _is_reserved_io(io_obj: Any) -> bool:
+    """Check if an IO is marked as reserved (e.g. unused pins on MIO modules)."""
+    name = getattr(io_obj, "name", "") or ""
+    return "reserved" in name.lower()
+
+
 def _make_io_info(
     io_obj: Any, device_name: str, module_type: str, io_type: int
 ) -> RevPiIOInfo:
@@ -240,12 +246,16 @@ class RevPiCoordinator(DataUpdateCoordinator[RevPiData]):
 
             # Discover inputs — only piCtory-exported IOs
             for io_obj in device.get_inputs(export=True):
+                if _is_reserved_io(io_obj):
+                    continue
                 io_info = _make_io_info(io_obj, device.name, module_type, IO_TYPE_INP)
                 mod_info.inputs.append(io_info)
                 io_map[io_obj.name] = io_info
 
             # Discover outputs — only piCtory-exported IOs
             for io_obj in device.get_outputs(export=True):
+                if _is_reserved_io(io_obj):
+                    continue
                 io_info = _make_io_info(io_obj, device.name, module_type, IO_TYPE_OUT)
                 mod_info.outputs.append(io_info)
                 io_map[io_obj.name] = io_info

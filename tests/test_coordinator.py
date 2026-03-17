@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from custom_components.ha_revpi.const import MODULE_TYPE_AIO, MODULE_TYPE_CORE, MODULE_TYPE_DIO, MODULE_TYPE_RELAY
-from custom_components.ha_revpi.coordinator import RevPiCoordinator, _classify_module
+from custom_components.ha_revpi.const import MODULE_TYPE_AIO, MODULE_TYPE_CORE, MODULE_TYPE_DIO, MODULE_TYPE_MIO, MODULE_TYPE_RELAY
+from custom_components.ha_revpi.coordinator import RevPiCoordinator, _classify_module, _is_reserved_io
 
 if TYPE_CHECKING:
     from unittest.mock import MagicMock
@@ -54,6 +54,34 @@ class TestClassifyModule:
     def test_relay_by_device_name(self) -> None:
         assert _classify_module("PR200zzz", "RevPi RO") == MODULE_TYPE_RELAY
 
+    def test_mio_module(self) -> None:
+        assert _classify_module("RevPiMIO") == MODULE_TYPE_MIO
+
+
+class TestReservedIO:
+    """Tests for reserved IO filtering."""
+
+    def test_reserved_io_detected(self) -> None:
+        from unittest.mock import MagicMock
+
+        io_obj = MagicMock()
+        io_obj.name = "InputValue_1_reserved"
+        assert _is_reserved_io(io_obj) is True
+
+    def test_reserved_io_case_insensitive(self) -> None:
+        from unittest.mock import MagicMock
+
+        io_obj = MagicMock()
+        io_obj.name = "OutputValue_Reserved_3"
+        assert _is_reserved_io(io_obj) is True
+
+    def test_normal_io_not_reserved(self) -> None:
+        from unittest.mock import MagicMock
+
+        io_obj = MagicMock()
+        io_obj.name = "InputValue_1"
+        assert _is_reserved_io(io_obj) is False
+
 
 class TestCoordinatorDiscovery:
     """Tests for module discovery."""
@@ -89,6 +117,29 @@ class TestCoordinatorDiscovery:
         assert ro.module_type == MODULE_TYPE_RELAY
         assert len(ro.inputs) == 0
         assert len(ro.outputs) == 1
+
+    def test_discover_mio_filters_reserved(self, mock_revpi_io: MagicMock) -> None:
+        """Test that reserved IOs are filtered out during MIO discovery."""
+        coordinator = RevPiCoordinator.__new__(RevPiCoordinator)
+        coordinator._revpi = mock_revpi_io
+        coordinator._modules = {}
+        coordinator._io_map = {}
+        coordinator._core_info = None
+
+        modules = coordinator.discover_modules()
+
+        mio = modules["mio01"]
+        assert mio.module_type == MODULE_TYPE_MIO
+        # 2 digital inputs + 1 analogue input (reserved filtered out)
+        assert len(mio.inputs) == 3
+        # 2 digital outputs (reserved filtered out)
+        assert len(mio.outputs) == 2
+        # Reserved IOs should not be in the io_map
+        assert coordinator.get_io_info("InputValue_1_reserved") is None
+        assert coordinator.get_io_info("OutputValue_1_reserved") is None
+        # Normal IOs should be present
+        assert coordinator.get_io_info("InputValue_1") is not None
+        assert coordinator.get_io_info("OutputValue_1") is not None
 
     def test_discover_digital_io(self, mock_revpi_io: MagicMock) -> None:
         """Test that digital IOs are identified correctly."""
