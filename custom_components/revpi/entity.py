@@ -42,7 +42,7 @@ class RevPiEntity(CoordinatorEntity[RevPiCoordinator]):
             # IO module entities belong to the child device, linked to core via via_device
             self._attr_device_info = DeviceInfo(
                 identifiers={(DOMAIN, f"{entry.entry_id}_{io_info.device_name}")},
-                name=f"RevPi {io_info.device_name}",
+                name=io_info.device_name,
                 manufacturer="KUNBUS GmbH",
                 model=io_info.module_type.upper(),
                 via_device=(DOMAIN, f"{entry.entry_id}{CORE_DEVICE_SUFFIX}"),
