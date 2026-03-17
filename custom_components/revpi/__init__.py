@@ -242,8 +242,12 @@ async def _async_setup_frontend(hass: HomeAssistant) -> None:
         await hass.async_add_executor_job(_copy)
 
     # Register as a Lovelace resource
-    hass.http.register_static_path(
-        "/local/community/revpi/revpi-ports-card.js",
-        dst,
-        cache_headers=False,
+    from homeassistant.components.http import StaticPathConfig
+
+    await hass.http.async_register_static_paths(
+        [StaticPathConfig(
+            "/local/community/revpi/revpi-ports-card.js",
+            dst,
+            cache_headers=False,
+        )]
     )
