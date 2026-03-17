@@ -227,13 +227,16 @@ class RevPiPortsCard extends LitElement {
   /* ── MIO render ── */
 
   _renderMIO(title) {
-    const digitalInputs = this._sortByNum(this._getDigitalInputs());
     const analogueInputs = this._sortByNum(this._getAnalogueInputs());
     const analogueOutputs = this._sortByNum(this._getAnalogueOutputs());
     const analogueOutSensors = this._sortByNum(
       this._getAnalogueOutputSensors()
     );
-    const digitalOutputs = this._sortByNum(this._getDigitalOutputs());
+
+    // Build unified digital IO list: merge inputs (sensors) and outputs (switches)
+    const digitalInputs = this._getDigitalInputs();
+    const digitalOutputs = this._getDigitalOutputs();
+    const digitalIOs = this._buildMIODigitalIOs(digitalInputs, digitalOutputs);
 
     // MIO has 4 digital IOs that can be configured as input or output (or mix)
     // Merge them into a single list reflecting the physical pin layout
@@ -253,6 +256,73 @@ class RevPiPortsCard extends LitElement {
           )}
         </div>
       </ha-card>
+    `;
+  }
+
+  /* ── Build unified MIO digital IO list ── */
+
+  _buildMIODigitalIOs(inputEids, outputEids) {
+    // Merge digital inputs and outputs into one list, sorted by pin number.
+    // Each item: { num, eid, isOutput }
+    const items = [];
+    for (const eid of inputEids) {
+      items.push({ num: this._extractNumber(eid), eid, isOutput: false });
+    }
+    for (const eid of outputEids) {
+      items.push({ num: this._extractNumber(eid), eid, isOutput: true });
+    }
+    // Sort ascending by pin number
+    items.sort((a, b) => a.num - b.num);
+    return items;
+  }
+
+  /* ── Unified MIO digital IO strip ── */
+
+  _renderMIODigitalStrip(ios) {
+    // Show highest pin first (e.g. 4, 3, 2, 1) to match physical layout
+    const reversed = [...ios].reverse();
+    return html`
+      <div class="section-label">DIGITAL I/O</div>
+      <div class="di-strip">
+        <div class="di-strip-row">
+          ${reversed.map((io) => html`<span class="di-num">${io.num}</span>`)}
+        </div>
+        <div class="di-strip-row">
+          ${reversed.map((io) => {
+            const entity = this.hass.states[io.eid];
+            if (!entity) return html`<span class="di-val off">?</span>`;
+            if (io.isOutput) {
+              // Output: clickable toggle
+              const isOn = entity.state === "on";
+              return html`
+                <span
+                  class="di-val clickable ${isOn ? "on" : "off"}"
+                  @click=${() => this._toggleSwitch(io.eid)}
+                  title="Output – click to toggle"
+                  >${isOn ? "ON" : "OFF"}</span
+                >
+              `;
+            } else {
+              // Input: read-only state
+              const on = this._isOn(entity.state);
+              return html`
+                <span class="di-val ${on ? "on" : "off"}"
+                  >${on ? "ON" : "OFF"}</span
+                >
+              `;
+            }
+          })}
+        </div>
+        <div class="di-strip-row di-type-row">
+          ${reversed.map(
+            (io) => html`
+              <span class="di-type ${io.isOutput ? "out" : "in"}"
+                >${io.isOutput ? "OUT" : "IN"}</span
+              >
+            `
+          )}
+        </div>
+      </div>
     `;
   }
 
@@ -888,6 +958,20 @@ class RevPiPortsCard extends LitElement {
       }
       .di-val.clickable:hover {
         background: rgba(232, 101, 10, 0.15);
+      }
+      .di-type-row {
+        margin-top: 2px;
+      }
+      .di-type {
+        font-size: 9px;
+        font-weight: 600;
+        letter-spacing: 0.5px;
+        text-align: center;
+        min-width: 48px;
+        color: var(--secondary-text-color);
+      }
+      .di-type.out {
+        color: var(--revpi-orange);
       }
 
       /* ── Analogue Connector Section ── */
