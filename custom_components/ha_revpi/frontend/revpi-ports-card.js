@@ -77,16 +77,25 @@ class RevPiPortsCard extends LitElement {
   _getDigitalInputs() {
     return this._deviceEntities.filter((eid) => {
       if (!eid.startsWith("sensor.")) return false;
-      if (eid.includes("_out_sensor")) return false;
+      if (this._isOutputSensor(eid)) return false;
       const entity = this.hass.states[eid];
       return entity && this._isDigital(entity.state);
     });
   }
 
+  _isOutputSensor(eid) {
+    // Output monitoring sensors may have _out_sensor in entity_id or
+    // "(output)" in friendly name (HA slugifies names differently)
+    if (eid.includes("_out_sensor") || eid.includes("_output")) return true;
+    const entity = this.hass.states[eid];
+    if (entity?.attributes?.friendly_name?.includes("(output)")) return true;
+    return false;
+  }
+
   _getAnalogueInputs() {
     return this._deviceEntities.filter((eid) => {
       if (!eid.startsWith("sensor.")) return false;
-      if (eid.includes("_out_sensor")) return false;
+      if (this._isOutputSensor(eid)) return false;
       const entity = this.hass.states[eid];
       return entity && !this._isDigital(entity.state);
     });
@@ -102,7 +111,7 @@ class RevPiPortsCard extends LitElement {
 
   _getAnalogueOutputSensors() {
     return this._deviceEntities.filter(
-      (eid) => eid.startsWith("sensor.") && eid.includes("_out_sensor")
+      (eid) => eid.startsWith("sensor.") && this._isOutputSensor(eid)
     );
   }
 
@@ -376,7 +385,7 @@ class RevPiPortsCard extends LitElement {
 
   _renderGenericInput(eid) {
     const entity = this.hass.states[eid];
-    if (!entity) return html``;
+    if (!entity || this._isOutputSensor(eid)) return html``;
     const name = this._getShortName(eid);
     const digital = this._isDigital(entity.state);
     const on = this._isOn(entity.state);
@@ -421,14 +430,16 @@ class RevPiPortsCard extends LitElement {
   /* ── Digital input strip (horizontal row, numbered) ── */
 
   _renderDigitalInputStrip(inputs) {
-    // Show highest number first (like physical module: 4, 3, 2, 1)
+    // Number sequentially 1..N (physical module labels), show highest first
+    const count = inputs.length;
     const reversed = [...inputs].reverse();
     return html`
       <div class="di-strip">
         <div class="di-strip-row">
-          ${reversed.map((eid) => {
-            const num = this._extractNumber(eid);
-            return html`<span class="di-num">${num || this._getShortName(eid)}</span>`;
+          ${reversed.map((_eid, idx) => {
+            // reversed[0] is the last input → display number = count - idx
+            const displayNum = count - idx;
+            return html`<span class="di-num">${displayNum}</span>`;
           })}
         </div>
         <div class="di-strip-row">
