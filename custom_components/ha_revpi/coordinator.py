@@ -86,6 +86,21 @@ class RevPiData:
     core_values: dict[str, Any] = field(default_factory=dict)
 
 
+def _is_digital_io(io_obj: Any) -> bool:
+    """Determine whether an IO point is digital (boolean).
+
+    revpimodio2 uses ``length == 0`` for individual bit IOs, but the first
+    bit at a byte boundary may report ``length == 1`` (the containing byte).
+    We also check the current value type: revpimodio2 returns ``bool`` for
+    bit-type IOs even when they span a full byte in the process image.
+    """
+    if io_obj.length == 0:
+        return True
+    if isinstance(io_obj.value, bool):
+        return True
+    return False
+
+
 def _classify_module(catalog_nr: str, device_name: str = "") -> str:
     """Classify a module by its catalog number, falling back to device name.
 
@@ -196,7 +211,12 @@ class RevPiCoordinator(DataUpdateCoordinator[RevPiData]):
 
             # Discover inputs
             for io_obj in device.get_inputs():
-                is_digital = io_obj.length == 0  # bit-length = 0 means digital (1 bit)
+                is_digital = _is_digital_io(io_obj)
+                _LOGGER.debug(
+                    "IO %s: length=%s, value=%r (%s), is_digital=%s",
+                    io_obj.name, io_obj.length, io_obj.value,
+                    type(io_obj.value).__name__, is_digital,
+                )
                 io_info = RevPiIOInfo(
                     name=io_obj.name,
                     device_name=device.name,
@@ -213,7 +233,12 @@ class RevPiCoordinator(DataUpdateCoordinator[RevPiData]):
 
             # Discover outputs
             for io_obj in device.get_outputs():
-                is_digital = io_obj.length == 0
+                is_digital = _is_digital_io(io_obj)
+                _LOGGER.debug(
+                    "IO %s: length=%s, value=%r (%s), is_digital=%s",
+                    io_obj.name, io_obj.length, io_obj.value,
+                    type(io_obj.value).__name__, is_digital,
+                )
                 io_info = RevPiIOInfo(
                     name=io_obj.name,
                     device_name=device.name,
