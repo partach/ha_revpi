@@ -31,7 +31,7 @@ class RevPiEntity(CoordinatorEntity[RevPiCoordinator]):
         self._io_info = io_info
         self._entry = entry
         self._attr_unique_id = f"{entry.entry_id}_{io_info.name}"
-        self._attr_name = f"{entry.title} {io_info.name}"
+        self._attr_name = io_info.name
 
         if io_info.module_type == MODULE_TYPE_CORE:
             # Core module IOs belong directly to the core (parent) device

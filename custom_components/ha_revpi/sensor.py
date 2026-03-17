@@ -13,7 +13,7 @@ from homeassistant.components.sensor import (
 from homeassistant.helpers.entity import DeviceInfo, EntityCategory
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import CORE_DEVICE_SUFFIX, CORE_IO_PREFIXES, DOMAIN, MODULE_TYPE_AIO, MODULE_TYPE_CORE
+from .const import CORE_DEVICE_SUFFIX, CORE_IO_PREFIXES, DOMAIN, MODULE_TYPE_AIO, MODULE_TYPE_CORE, MODULE_TYPE_MIO
 from .coordinator import RevPiCoordinator
 from .entity import RevPiEntity
 
@@ -56,7 +56,7 @@ async def async_setup_entry(
                 entities.append(RevPiAnalogueInputSensor(coordinator, entry, io_info))
 
         # Also expose analogue outputs as read-only sensors for monitoring
-        if mod_info.module_type == MODULE_TYPE_AIO:
+        if mod_info.module_type in (MODULE_TYPE_AIO, MODULE_TYPE_MIO):
             for io_info in mod_info.outputs:
                 if not io_info.is_digital:
                     entities.append(RevPiAnalogueOutputSensor(coordinator, entry, io_info))
@@ -205,7 +205,7 @@ class RevPiAnalogueOutputSensor(RevPiEntity, SensorEntity):
         """Initialize analogue output monitoring sensor."""
         super().__init__(coordinator, entry, io_info)
         self._attr_unique_id = f"{entry.entry_id}_{io_info.name}_out_sensor"
-        self._attr_name = f"{entry.title} {io_info.name} (output)"
+        self._attr_name = f"{io_info.name} (output)"
 
     @property
     def native_value(self) -> int | float | None:
@@ -235,7 +235,7 @@ class RevPiCoreSensor(CoordinatorEntity[RevPiCoordinator], SensorEntity):
         super().__init__(coordinator)
         self._core_key = core_key
         self._attr_unique_id = f"{entry.entry_id}_core_{core_key}"
-        self._attr_name = f"{entry.title} {name}"
+        self._attr_name = name
         self._attr_device_class = device_class
         self._attr_state_class = state_class
         self._attr_native_unit_of_measurement = unit
@@ -271,7 +271,7 @@ class RevPiCoreBinarySensor(CoordinatorEntity[RevPiCoordinator], SensorEntity):
         super().__init__(coordinator)
         self._core_key = core_key
         self._attr_unique_id = f"{entry.entry_id}_core_{core_key}"
-        self._attr_name = f"{entry.title} {name}"
+        self._attr_name = name
         self._attr_icon = icon
         self._attr_device_info = device_info
         if entity_category is not None:

@@ -31,6 +31,7 @@ IO_TYPE_MEM: Final = 302
 MODULE_TYPE_DIO: Final = "dio"
 MODULE_TYPE_AIO: Final = "aio"
 MODULE_TYPE_RELAY: Final = "ro"
+MODULE_TYPE_MIO: Final = "mio"
 MODULE_TYPE_CORE: Final = "core"
 MODULE_TYPE_CONNECT: Final = "connect"
 MODULE_TYPE_GATE: Final = "gate"
@@ -38,6 +39,7 @@ MODULE_TYPE_GATE: Final = "gate"
 # Catalog number prefixes for module identification
 CATALOG_DIO_PREFIXES: Final = ("RevPiDIO", "RevPiDI", "RevPiDO")
 CATALOG_AIO_PREFIXES: Final = ("RevPiAIO",)
+CATALOG_MIO_PREFIXES: Final = ("RevPiMIO",)
 CATALOG_RELAY_PREFIXES: Final = ("RevPiRO",)
 CATALOG_CORE_PREFIXES: Final = ("RevPiCore", "RevPiConnect", "RevPiFlat")
 
@@ -46,6 +48,7 @@ CATALOG_CORE_PREFIXES: Final = ("RevPiCore", "RevPiConnect", "RevPiFlat")
 CORE_NAME_KEYWORDS: Final = ("core", "connect", "flat")
 DIO_NAME_KEYWORDS: Final = ("dio", " di", " do")
 AIO_NAME_KEYWORDS: Final = ("aio",)
+MIO_NAME_KEYWORDS: Final = ("mio",)
 RELAY_NAME_KEYWORDS: Final = (" ro",)
 
 # Known core/system IO name prefixes — these should never be exposed as mV sensors

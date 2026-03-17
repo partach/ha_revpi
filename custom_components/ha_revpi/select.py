@@ -71,7 +71,7 @@ class RevPiModeSelect(CoordinatorEntity[RevPiCoordinator], SelectEntity):
         self._entry = entry
         self._option_key = option_key
         self._attr_unique_id = f"{entry.entry_id}_{option_key}"
-        self._attr_name = f"{entry.title} {name}"
+        self._attr_name = name
         self._attr_options = options
         self._attr_icon = icon
         self._attr_device_info = device_info
