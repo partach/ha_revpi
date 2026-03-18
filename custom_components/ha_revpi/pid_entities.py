@@ -22,13 +22,56 @@ from homeassistant.components.switch import SwitchEntity
 from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
+from .const import CONF_BUILDING_DEVICES, DOMAIN
+
 if TYPE_CHECKING:
+    from homeassistant.config_entries import ConfigEntry
     from homeassistant.core import HomeAssistant
 
     from .devices.base import BuildingDeviceHandler
     from .devices.pid import PIDController
 
 _LOGGER = logging.getLogger(__name__)
+
+
+def _persist_control_config(
+    hass: HomeAssistant,
+    handler: BuildingDeviceHandler,
+) -> None:
+    """Write the handler's in-memory control config back to entry.options.
+
+    Locates the matching device in the persisted building_devices list
+    by name+type and replaces its control section.
+    """
+    entry: ConfigEntry | None = hass.config_entries.async_get_entry(handler.entry_id)
+    if entry is None:
+        _LOGGER.warning("Config entry %s not found, cannot persist PID state", handler.entry_id)
+        return
+
+    control = handler.config.get("control")
+    if control is None:
+        return
+
+    new_options = dict(entry.options)
+    devices: list[dict[str, Any]] = [
+        dict(d) for d in new_options.get(CONF_BUILDING_DEVICES, [])
+    ]
+
+    for dev in devices:
+        if dev.get("name") == handler.name and dev.get("type") == handler.device_type:
+            dev["control"] = dict(control)
+            # Also persist nested params dict
+            if "params" in control:
+                dev["control"]["params"] = dict(control["params"])
+            break
+
+    new_options[CONF_BUILDING_DEVICES] = devices
+
+    # Signal the update_listener to skip a full reload for this change
+    hub_data = hass.data.get(DOMAIN, {}).get(handler.entry_id, {})
+    hub_data["skip_reload"] = True
+
+    hass.config_entries.async_update_entry(entry, options=new_options)
 
 
 # ---------------------------------------------------------------------------
@@ -121,6 +164,7 @@ class RevPiPIDEnableSwitch(CoordinatorEntity, SwitchEntity):
         if new_task:
             self._handler._pid_task = new_task  # type: ignore[attr-defined]
             _LOGGER.info("PID enabled for %s", self._handler.name)
+        _persist_control_config(self.hass, self._handler)
         self.async_write_ha_state()
 
     async def async_turn_off(self, **kwargs: Any) -> None:
@@ -134,6 +178,7 @@ class RevPiPIDEnableSwitch(CoordinatorEntity, SwitchEntity):
                 await task
             _LOGGER.info("PID disabled for %s", self._handler.name)
         self._handler._pid_task = None  # type: ignore[attr-defined]
+        _persist_control_config(self.hass, self._handler)
         self.async_write_ha_state()
 
 
@@ -204,16 +249,12 @@ class RevPiPIDParameterNumber(CoordinatorEntity, NumberEntity):
                 "PID %s.%s set to %s",
                 self._handler.name, self._param_key, value,
             )
-        else:
-            # Update the config so the value is used when PID starts
-            params = self._handler.config.setdefault("control", {}).setdefault(
-                "params", {}
-            )
-            params[self._param_key] = value
-            _LOGGER.info(
-                "PID %s.%s stored as %s (PID not running)",
-                self._handler.name, self._param_key, value,
-            )
+        # Always update in-memory config so it persists
+        params = self._handler.config.setdefault("control", {}).setdefault(
+            "params", {}
+        )
+        params[self._param_key] = value
+        _persist_control_config(self.hass, self._handler)
         self.async_write_ha_state()
 
 
@@ -254,6 +295,7 @@ class RevPiPIDSampleIntervalNumber(CoordinatorEntity, NumberEntity):
             "PID %s sample_interval set to %s (restart PID to apply)",
             self._handler.name, value,
         )
+        _persist_control_config(self.hass, self._handler)
         self.async_write_ha_state()
 
 
