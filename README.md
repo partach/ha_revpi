@@ -73,7 +73,7 @@ You can choose all found devices and the card will show that information. The ca
 The card is interactive so you can also change values here (depending on how you setup the module in PiCtory)<br>
 
 ## Setting up RevPI CPU
-1. unbox your goodies. Pay special attention to right side of CPU. It states the **URL and password** to connect to your CPU!<br>
+1. Unbox your goodies. Pay special attention to right side of CPU. It states the **URL and password** to connect to your CPU!<br>
 2. Write it down **URL and password** as you need it later.<br>
 3. Best to use a DIN rail; Connect 24V power supply to CPU and module(s), see picture<br>
 
@@ -147,7 +147,7 @@ Make sure the file is executable: <br>
 ```
 sudo chown +x run-home-assistant.sh
 ```
-now run the container to start HA (this is reboot safe due to options given when constructing the container).
+now run the container to start HA (this is reboot safe due to options given when constructing the container).<br>
 Meaning when all goes well you don't have to ever run this start up script again (unless you want to change parameters).
 
 ```
@@ -166,8 +166,8 @@ sudo docker exec -it homeassistant bash
 
 ## Installation of HACS for Home Assistant on RevPI CPU
 Setting up HACS on your RevPI goes via the terminal, accessible via the default web home page after login (menu on the left).<br>
-See above how to login.
-First make sure you have installed HA and the container is running (step above).
+See above how to login.<br>
+First make sure you have installed HA and the container is running (step above).<br>
 ```
 sudo docker exec -it homeassistant bash -c "wget -O - https://get.hacs.xyz | bash -"
 sudo docker restart homeassistant
@@ -177,10 +177,10 @@ The rest is default HACS install (in HA go to settings --> devices and services 
 
 ## Run integration on other HA installation in the network
 With default settings of the RevPI this is not possible (yet).<br>
-You need to adapt (via terminal) some settings.
+You need to adapt (via terminal) some settings.<br>
 
 [PLCSERVER] is disabled — plcserver = 0. This is the service RevPiNetIO connects to.<br>
-[XMLRPC] is bound to localhost — bindip = 127.0.0.1, so it only accepts local connections.
+[XMLRPC] is bound to localhost — bindip = 127.0.0.1, so it only accepts local connections.<br>
 
 To fix both:
 ```
@@ -196,7 +196,7 @@ Now add your HA host to the allowed list:
 ```
 sudo nano /etc/revpipyload/aclplcserver.conf
 ```
-Add the IP and ACL level of your local HA instance there like 192.168.x.x,2
+Add the IP and ACL level of your local HA instance there like 192.168.x.x,2<br>
 ACL level 2 is read/write (1 is read only)
 
 Then restart:
