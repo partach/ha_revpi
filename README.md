@@ -166,7 +166,7 @@ The rest is default HACS install (in HA go to settings --> devices and services 
 
 
 ## Run integration on other HA installation in the network
-With default settings of the RevPI this is not possible.<BR>
+With default settings of the RevPI this is not possible (yet).<BR>
 You need to adapt (via terminal) some settings.
 
 [PLCSERVER] is disabled — plcserver = 0. This is the service RevPiNetIO connects to.<BR>
@@ -193,6 +193,8 @@ Then restart:
 ```
 sudo systemctl restart revpipyload
 ```
+
+But... did not get it working yet. Not sure if revpimodio2 2.8.1 (running on HA) is fully compatible with latest RevPI revpipyload?
 
 ## Discussion 
 See [here](https://github.com/partach/ha_revpi/discussions)
