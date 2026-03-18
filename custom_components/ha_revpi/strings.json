@@ -49,6 +49,20 @@
           "device_name": "Device name"
         }
       },
+      "edit_building_device": {
+        "title": "Edit Building Device",
+        "description": "Select a building device to edit its IO mapping.",
+        "data": {
+          "device_index": "Device to edit"
+        }
+      },
+      "edit_building_device_ios": {
+        "title": "Edit IO Mapping",
+        "description": "Change the IO point mapping for this device.\n{errors}",
+        "data": {
+          "device_name": "Device name"
+        }
+      },
       "remove_building_device": {
         "title": "Remove Building Device",
         "description": "Select a building device to remove.",
