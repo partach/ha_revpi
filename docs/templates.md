@@ -159,7 +159,8 @@ See [Transforms In Depth](#transforms-in-depth) for formulas and examples.
 
 ### Control Block (PID)
 
-Optional. When present and enabled, the integration starts a separate async task that continuously reads a sensor, computes a PID output, and writes to an actuator.
+Optional. When present and enabled, the integration will start a separate async task that continuously reads a sensor, computes a PID output, and writes to an actuator.<br>
+Later in the integration this can be overruled (PID started or stopped for example)
 
 ```json
 "control": {
@@ -182,7 +183,7 @@ Optional. When present and enabled, the integration starts a separate async task
 | Field | Required | Default | Description |
 |---|---|---|---|
 | `type` | Yes | — | Control algorithm type. Currently only `"pid"` is supported. |
-| `enabled` | No | `false` | Set to `true` to start the control loop on integration load. |
+| `enabled` | No | `false` | Set to `true` to start the control loop on integration load. (or enable later in device UI) |
 | `params` | No | `{}` | PID tuning parameters (see [PID Controller In Depth](#pid-controller-in-depth)). |
 | `sample_interval` | No | `1.0` | Loop execution interval in seconds. How often the controller reads and writes. |
 | `input_role` | Yes | — | The `role` of the IO to read as the process variable (must match an IO role in `ios`). |
@@ -209,7 +210,7 @@ Type: `"ahu"` — Creates a **Climate** entity as the primary control, plus sens
 | `filter_alarm` | input | bool | No | Binary Sensor | Filter differential pressure alarm |
 | `frost_alarm` | input | bool | No | Binary Sensor | Frost protection alarm |
 
-The Climate entity supports HVAC modes OFF, HEAT, and AUTO (when PID is enabled). The `hvac_action` is derived from fan status and valve position.
+The Climate entity supports HVAC modes OFF, COOL, HEAT, and AUTO (when PID is enabled). The `hvac_action` is derived from fan status and valve position.
 
 ### Fan
 
