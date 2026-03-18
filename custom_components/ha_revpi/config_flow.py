@@ -27,6 +27,8 @@ from .const import (
     DEFAULT_HOST,
     DEFAULT_POLL_INTERVAL,
     DOMAIN,
+    IO_TYPE_INP,
+    IO_TYPE_OUT,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -313,13 +315,27 @@ class RevPiOptionsFlowHandler(OptionsFlow):
                     template["ios"][key]["io_name"] = user_input[input_key]
 
             # Validate IO names exist in coordinator
-            hub_data = self.hass.data.get(DOMAIN, {}).get(
-                self.config_entry.entry_id, {}
-            )
-            coordinator = hub_data.get("coordinator")
+            coordinator = self._get_coordinator()
             available_ios: set[str] = set()
             if coordinator and coordinator.data:
                 available_ios = set(coordinator.data.io_values.keys())
+
+            # Check for unselected IOs (empty string from placeholder)
+            unmapped = [
+                key
+                for key, io_conf in template.get("ios", {}).items()
+                if not io_conf.get("io_name", "").strip()
+            ]
+            if unmapped:
+                details = "Not mapped: " + ", ".join(
+                    f"**{k}**" for k in unmapped
+                )
+                return self.async_show_form(
+                    step_id="confirm_building_device",
+                    data_schema=self._build_confirm_schema(template),
+                    errors={"base": "io_not_found"},
+                    description_placeholders={"errors": details},
+                )
 
             if available_ios:
                 errors_list = validate_io_mapping(template, available_ios)
@@ -327,7 +343,6 @@ class RevPiOptionsFlowHandler(OptionsFlow):
                     _LOGGER.warning(
                         "IO mapping validation: %s", errors_list
                     )
-                    # Extract just the missing IO names for a clean message
                     missing_names = []
                     for key, io_conf in template.get("ios", {}).items():
                         io_name = io_conf.get("io_name", "")
@@ -376,6 +391,52 @@ class RevPiOptionsFlowHandler(OptionsFlow):
             description_placeholders={"errors": ""},
         )
 
+    def _get_coordinator(self) -> Any:
+        """Get the RevPi coordinator from hass data."""
+        hub_data = self.hass.data.get(DOMAIN, {}).get(
+            self.config_entry.entry_id, {}
+        )
+        return hub_data.get("coordinator")
+
+    def _get_compatible_ios(
+        self, io_conf: dict[str, Any]
+    ) -> dict[str, str]:
+        """Get IOs compatible with a template IO slot as dropdown choices.
+
+        Filters by direction (input/output) and data_type (bool/analog).
+        Returns {io_name: "io_name (module - type)"} for vol.In().
+        """
+        coordinator = self._get_coordinator()
+        if not coordinator:
+            return {}
+
+        all_ios = coordinator.get_all_io_info()
+        if not all_ios:
+            return {}
+
+        # Map template fields to coordinator fields
+        want_input = io_conf.get("direction") == "input"
+        want_digital = io_conf.get("data_type") == "bool"
+
+        choices: dict[str, str] = {}
+        for name, info in sorted(all_ios.items()):
+            # Filter by direction
+            if want_input and info.io_type != IO_TYPE_INP:
+                continue
+            if not want_input and info.io_type != IO_TYPE_OUT:
+                continue
+            # Filter by signal type
+            if want_digital and not info.is_digital:
+                continue
+            if not want_digital and info.is_digital:
+                continue
+
+            kind = "digital" if info.is_digital else "analog"
+            direction = "input" if info.io_type == IO_TYPE_INP else "output"
+            choices[name] = f"{name} ({info.device_name} - {kind} {direction})"
+
+        return choices
+
     def _build_confirm_schema(
         self, template: dict[str, Any]
     ) -> vol.Schema:
@@ -388,13 +449,30 @@ class RevPiOptionsFlowHandler(OptionsFlow):
 
         for key, io_conf in template.get("ios", {}).items():
             label = io_conf.get("description") or key
-            schema_dict[
-                vol.Optional(
-                    f"io_{key}",
-                    default=io_conf.get("io_name", ""),
-                    description={"suffix": f"({label})"},
-                )
-            ] = str
+            default_io = io_conf.get("io_name", "")
+            compatible = self._get_compatible_ios(io_conf)
+
+            if compatible:
+                # Use the template default if it's in the list, otherwise
+                # don't pre-select anything
+                if default_io not in compatible:
+                    default_io = ""
+                schema_dict[
+                    vol.Optional(
+                        f"io_{key}",
+                        default=default_io,
+                        description={"suffix": f"({label})"},
+                    )
+                ] = vol.In({"": f"-- Select {label} --", **compatible})
+            else:
+                # Fallback to free text if no coordinator data available
+                schema_dict[
+                    vol.Optional(
+                        f"io_{key}",
+                        default=default_io,
+                        description={"suffix": f"({label})"},
+                    )
+                ] = str
 
         return vol.Schema(schema_dict)
 

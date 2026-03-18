@@ -353,6 +353,10 @@ class RevPiCoordinator(DataUpdateCoordinator[RevPiData]):
         """Get IO info by name."""
         return self._io_map.get(io_name)
 
+    def get_all_io_info(self) -> dict[str, RevPiIOInfo]:
+        """Return all discovered IO info objects."""
+        return dict(self._io_map)
+
     def get_modules(self) -> dict[str, RevPiModuleInfo]:
         """Return discovered modules."""
         return self._modules
