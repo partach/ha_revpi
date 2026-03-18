@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "name": "Motorised Damper",
+  "type": "damper",
+  "description": "Motorised damper with modulating position control",
+  "ios": {
+    "damper_position": {
+      "io_name": "AO_DAMPER",
+      "role": "position_command",
+      "direction": "output",
+      "data_type": "analog",
+      "transform": {
+        "type": "linear",
+        "input_min": 0,
+        "input_max": 10000,
+        "output_min": 0.0,
+        "output_max": 100.0,
+        "unit": "%",
+        "precision": 0
+      },
+      "description": "Damper position command (0-10V = 0-100% open)"
+    },
+    "damper_feedback": {
+      "io_name": "AI_DAMPER_FB",
+      "role": "position_feedback",
+      "direction": "input",
+      "data_type": "analog",
+      "transform": {
+        "type": "linear",
+        "input_min": 0,
+        "input_max": 10000,
+        "output_min": 0.0,
+        "output_max": 100.0,
+        "unit": "%",
+        "precision": 0
+      },
+      "description": "Damper position feedback (0-10V = 0-100%)"
+    }
+  }
+}

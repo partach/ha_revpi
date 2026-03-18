@@ -30,6 +30,7 @@ if TYPE_CHECKING:
     from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
     from .coordinator import RevPiIOInfo
+    from .devices.base import BuildingDeviceHandler, IOMapping
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -70,6 +71,14 @@ async def async_setup_entry(
 
     # Add core module diagnostic sensors (CPU temp, frequency, IO errors, etc.)
     _add_core_sensors(coordinator, entry, entities)
+
+    # Add building device sensor entities (alarms, analog monitors)
+    hub_data = hass.data[DOMAIN][entry.entry_id]
+    handlers = hub_data.get("building_handlers", [])
+    for handler in handlers:
+        for entity in handler.get_entities():
+            if isinstance(entity, SensorEntity):
+                entities.append(entity)
 
     async_add_entities(entities)
 
@@ -293,3 +302,78 @@ class RevPiCoreBinarySensor(CoordinatorEntity[RevPiCoordinator], SensorEntity):
         if val is None:
             return None
         return "Running" if val else "Stopped"
+
+
+# ---------------------------------------------------------------------------
+# Building device sensor entities
+# ---------------------------------------------------------------------------
+
+
+class RevPiBuildingBinarySensor(CoordinatorEntity[RevPiCoordinator], SensorEntity):
+    """Binary sensor for a building device (e.g., filter alarm)."""
+
+    _attr_has_entity_name = True
+
+    def __init__(
+        self,
+        handler: BuildingDeviceHandler,
+        mapping: IOMapping,
+        device_class: str = "problem",
+    ) -> None:
+        """Initialize."""
+        super().__init__(handler.coordinator)
+        self._handler = handler
+        self._mapping = mapping
+        self._attr_unique_id = (
+            f"{handler.device_id}_{mapping.logical_name}"
+        )
+        self._attr_name = (
+            mapping.description or mapping.role.replace("_", " ").title()
+        )
+        self._attr_device_info = handler.device_info
+        self._attr_icon = "mdi:alert-circle-outline"
+        if device_class == "problem":
+            self._attr_entity_category = EntityCategory.DIAGNOSTIC
+
+    @property
+    def native_value(self) -> str | None:
+        """Return alarm state as string."""
+        val = self._handler.read_io_engineering(self._mapping)
+        if val is None:
+            return None
+        return "ON" if val else "OFF"
+
+
+class RevPiBuildingAnalogSensor(CoordinatorEntity[RevPiCoordinator], SensorEntity):
+    """Analog sensor for a building device (e.g., valve position %)."""
+
+    _attr_has_entity_name = True
+    _attr_state_class = SensorStateClass.MEASUREMENT
+
+    def __init__(
+        self,
+        handler: BuildingDeviceHandler,
+        mapping: IOMapping,
+    ) -> None:
+        """Initialize."""
+        super().__init__(handler.coordinator)
+        self._handler = handler
+        self._mapping = mapping
+        self._attr_unique_id = (
+            f"{handler.device_id}_{mapping.logical_name}_sensor"
+        )
+        self._attr_name = (
+            mapping.description or mapping.role.replace("_", " ").title()
+        )
+        self._attr_device_info = handler.device_info
+        self._attr_icon = "mdi:gauge"
+        if mapping.transform:
+            self._attr_native_unit_of_measurement = mapping.transform.unit
+
+    @property
+    def native_value(self) -> float | None:
+        """Return the transformed analogue value."""
+        val = self._handler.read_io_engineering(self._mapping)
+        if val is None:
+            return None
+        return float(val)
