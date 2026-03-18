@@ -77,9 +77,9 @@ The card is interactive so you can also change values here (depending on how you
 3. Connect network (wired out of the box, wireless is option). We assume now wired in this example<BR>
 4. Use browser on same network. Use the data gathered in step 1. Example: https://revpi123456.local:41443 <BR>
      (see right side of CPU housing for actual serial number)<BR>
-5. If all ok you get a login screen. User: pi , Password: as written down during unboxing in step 1.<BR>
-6. You are now logged in! If not, repeat previous steps to see if you missed anything<BR>
-7. On the right side of the menu, go to 'Software update' (if you are linux savvy you can use apt in the terminal...) <BR>
+5. If all ok you get a login screen. User: `pi` , Password: `as written down during unboxing in step 1`.<BR>
+6. You are now logged in! If not, repeat previous steps to see if you missed anything.<BR>
+7. On the left side menu, go to `Software update` (if you are linux savvy you can use apt in the terminal...) <BR>
 <BR>
 <p align="center">
   <img src="https://github.com/partach/ha_revpi/blob/main/pictures/revpi-main-web.png" width="600"/>
