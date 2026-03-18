@@ -144,6 +144,11 @@ Meaning when all goes well you don't have to ever run this start up script again
 ./run-home-assistant.sh
 ```
 
+If you want to know your RevPI IP address use:
+```
+hostname -I
+```
+
 ## Installation of HACS for Home Assistant on RevPI CPU
 Setting up HACS on your RevPI goes via the terminal, accessible via the default web home page after login (menu on the left).<BR>
 See above how to login.
