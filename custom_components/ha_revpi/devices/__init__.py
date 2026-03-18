@@ -2,9 +2,13 @@
 
 from __future__ import annotations
 
-import importlib
 import logging
 from typing import TYPE_CHECKING, Any
+
+from .ahu import AHUHandler
+from .damper import DamperHandler
+from .fan_device import FanHandler
+from .valve import ValveHandler
 
 if TYPE_CHECKING:
     from ..coordinator import RevPiCoordinator
@@ -12,28 +16,21 @@ if TYPE_CHECKING:
 
 _LOGGER = logging.getLogger(__name__)
 
-# Maps device type string to module name within this package
-DEVICE_TYPE_REGISTRY: dict[str, str] = {
-    "ahu": "ahu",
-    "fan": "fan_device",
-    "valve": "valve",
-    "damper": "damper",
+# Maps device type string to handler class
+DEVICE_TYPE_REGISTRY: dict[str, type[BuildingDeviceHandler]] = {
+    "ahu": AHUHandler,
+    "fan": FanHandler,
+    "valve": ValveHandler,
+    "damper": DamperHandler,
 }
 
 
 def get_handler_class(device_type: str) -> type[BuildingDeviceHandler] | None:
     """Get the handler class for a device type."""
-    module_name = DEVICE_TYPE_REGISTRY.get(device_type)
-    if not module_name:
+    cls = DEVICE_TYPE_REGISTRY.get(device_type)
+    if cls is None:
         _LOGGER.error("Unknown building device type: %s", device_type)
-        return None
-
-    try:
-        module = importlib.import_module(f".{module_name}", package=__name__)
-        return getattr(module, "HANDLER_CLASS", None)
-    except (ImportError, AttributeError) as err:
-        _LOGGER.error("Failed to load handler for %s: %s", device_type, err)
-        return None
+    return cls
 
 
 def create_handler(
