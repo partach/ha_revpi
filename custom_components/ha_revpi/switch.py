@@ -26,7 +26,8 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up Revolution Pi switches based on the coordinator data."""
-    coordinator: RevPiCoordinator = hass.data[DOMAIN][entry.entry_id]["coordinator"]
+    hub_data = hass.data[DOMAIN][entry.entry_id]
+    coordinator: RevPiCoordinator = hub_data["coordinator"]
     modules = coordinator.get_modules()
 
     entities: list[SwitchEntity] = []
@@ -38,6 +39,13 @@ async def async_setup_entry(
         for io_info in mod_info.outputs:
             if io_info.is_digital:
                 entities.append(RevPiDigitalOutputSwitch(coordinator, entry, io_info))
+
+    # Building device switches (e.g. PID enable)
+    handlers = hub_data.get("building_handlers", [])
+    for handler in handlers:
+        for entity in handler.get_entities():
+            if isinstance(entity, SwitchEntity):
+                entities.append(entity)
 
     async_add_entities(entities)
 

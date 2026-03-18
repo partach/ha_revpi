@@ -15,6 +15,7 @@ class AHUHandler(BuildingDeviceHandler):
 
     Creates a ClimateEntity plus optional binary sensors for alarms
     and analogue sensors for valve/damper monitoring.
+    If a PID control section is defined, also creates PID tuning entities.
     """
 
     device_type = "ahu"
@@ -22,6 +23,7 @@ class AHUHandler(BuildingDeviceHandler):
     def get_entities(self) -> list[Any]:
         """Create HA entities for this AHU."""
         from ..climate import RevPiBuildingClimate
+        from ..pid_entities import create_pid_entities
         from ..sensor import RevPiBuildingAnalogSensor, RevPiBuildingBinarySensor
 
         entities: list[Any] = []
@@ -40,6 +42,9 @@ class AHUHandler(BuildingDeviceHandler):
                 and mapping.direction == "output"
             ):
                 entities.append(RevPiBuildingAnalogSensor(self, mapping))
+
+        # PID controller entities (switch, parameter numbers, output sensor)
+        entities.extend(create_pid_entities(self))
 
         return entities
 
