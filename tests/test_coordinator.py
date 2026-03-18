@@ -4,8 +4,18 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from custom_components.ha_revpi.const import MODULE_TYPE_AIO, MODULE_TYPE_CORE, MODULE_TYPE_DIO, MODULE_TYPE_MIO, MODULE_TYPE_RELAY
-from custom_components.ha_revpi.coordinator import RevPiCoordinator, _classify_module, _is_reserved_io
+from custom_components.ha_revpi.const import (
+    MODULE_TYPE_AIO,
+    MODULE_TYPE_CORE,
+    MODULE_TYPE_DIO,
+    MODULE_TYPE_MIO,
+    MODULE_TYPE_RELAY,
+)
+from custom_components.ha_revpi.coordinator import (
+    RevPiCoordinator,
+    _classify_module,
+    _is_reserved_io,
+)
 
 if TYPE_CHECKING:
     from unittest.mock import MagicMock

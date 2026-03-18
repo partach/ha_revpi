@@ -13,7 +13,14 @@ from homeassistant.components.sensor import (
 from homeassistant.helpers.entity import DeviceInfo, EntityCategory
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import CORE_DEVICE_SUFFIX, CORE_IO_PREFIXES, DOMAIN, MODULE_TYPE_AIO, MODULE_TYPE_CORE, MODULE_TYPE_MIO
+from .const import (
+    CORE_DEVICE_SUFFIX,
+    CORE_IO_PREFIXES,
+    DOMAIN,
+    MODULE_TYPE_AIO,
+    MODULE_TYPE_CORE,
+    MODULE_TYPE_MIO,
+)
 from .coordinator import RevPiCoordinator
 from .entity import RevPiEntity
 

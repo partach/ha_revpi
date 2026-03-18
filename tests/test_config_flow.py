@@ -8,6 +8,9 @@ from unittest.mock import MagicMock, patch
 from homeassistant import config_entries
 from homeassistant.data_entry_flow import FlowResultType
 
+import pytest
+
+from custom_components.ha_revpi.config_flow import _sanitize_host
 from custom_components.ha_revpi.const import (
     CONF_CONNECTION_TYPE,
     CONF_HOST,
@@ -121,3 +124,21 @@ async def test_form_already_configured(
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "already_configured"
+
+
+@pytest.mark.parametrize(
+    ("raw", "expected"),
+    [
+        ("revpi.local", "revpi.local"),
+        ("https://revpi.local", "revpi.local"),
+        ("http://revpi.local", "revpi.local"),
+        ("https://revpi.local/", "revpi.local"),
+        ("https://revpi.local:8080/path", "revpi.local"),
+        ("  revpi.local  ", "revpi.local"),
+        ("192.168.1.50", "192.168.1.50"),
+        ("https://192.168.1.50", "192.168.1.50"),
+    ],
+)
+def test_sanitize_host(raw: str, expected: str) -> None:
+    """Test that scheme, port, path, and whitespace are stripped from host input."""
+    assert _sanitize_host(raw) == expected
