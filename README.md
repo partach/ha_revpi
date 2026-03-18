@@ -4,7 +4,10 @@
 [![License](https://img.shields.io/github/license/partach/ha_revpi?color=ffca28&style=flat-square)](https://github.com/partach/ha_revpi/blob/main/LICENSE)
 [![HACS validated](https://img.shields.io/badge/HACS-validated-41BDF5?style=flat-square)](https://github.com/hacs/integration)
 # RevPI for Home Assistant: ha_revpi
-RevPI CPU and RevPI module support for Home Assistant
+RevPI CPU and RevPI module support for Home Assistant<BR>
+
+The below tutorial is focussed on the main steps and skips details on standard RevPI knowledge or linux knowledge for that matter.<BR>
+It is beyond the goal of this tutorial to explain those. For RevPI basics look at https://revolutionpi.com/ for more help
 
 
 <p align="center">
@@ -27,30 +30,97 @@ RevPI CPU and RevPI module support for Home Assistant
 ## Installation of Integration
 Options:
 1. Install via HACS
-   * coming
+   * coming (first install HA and HACS on RevPi, see below)
    * After HA reboot (Needed for new integrations): choose 'add integration' (in devices and services) and choose `ha_revpi` in the list.
 2. Install manually:
+   * First install HA and HACS on RevPi, see further below on RevPI installation steps
    * The integration: In UI go to `HACS`--> `custom repositories` --> `Repo`: partach/ha_revpi, `Type`: Integration
    * After HA reboot (Needed for new integrations): choose 'add integration' (in devices and services) and choose `ha_revpi` in the list.
      
 Let the install config of the integration guide you as it asks you for the needed data.
 
 ## Setting up RevPI CPU
-1. unbox your goodies. Pay special attention to right side of CPU. It states the **URL and password** to connect to your CPU!
-2. Write it down ** URL and password** as you need it later.
-3. Best to use a DIN rail; Connect 24V power supply to CPU and module(s), see picture
+1. unbox your goodies. Pay special attention to right side of CPU. It states the **URL and password** to connect to your CPU!<BR>
+2. Write it down **URL and password** as you need it later.<BR>
+3. Best to use a DIN rail; Connect 24V power supply to CPU and module(s), see picture<BR>
 <p align="center">
   <img src="https://github.com/partach/ha_revpi/blob/main/pictures/revpi-power.png" width="200"/>
   <br><em>Connect power supply 24V DC</em>
 </p>
-3. Connect network (wired out of the box, wireless is option). We assume now wired in this example
-4. Use browser on same network. Use the data gathered in step 1. Example: https://revpi123456.local:41443 (see right side of CPU housing for actual serial number)
-5. If all ok you get a login screen. User: pi , Password: as written down during unboxing in step 1.
-6. You are now logged in! If not, repeat previous steps to see if you missed anything
-7. On the right side of the menu, go to 'Software update' (if you are linux savvy you can use apt in the terminal...) 
+3. Connect network (wired out of the box, wireless is option). We assume now wired in this example<BR>
+4. Use browser on same network. Use the data gathered in step 1. Example: https://revpi123456.local:41443 <BR>
+     (see right side of CPU housing for actual serial number)<BR>
+5. If all ok you get a login screen. User: pi , Password: as written down during unboxing in step 1.<BR>
+6. You are now logged in! If not, repeat previous steps to see if you missed anything<BR>
+7. On the right side of the menu, go to 'Software update' (if you are linux savvy you can use apt in the terminal...) <BR>
 <p align="center">
-  <img src="https://github.com/partach/ha_revpi/blob/main/pictures/revpi-power.png" width="200"/>
+  <img src="https://github.com/partach/ha_revpi/blob/main/pictures/revpi-main-web.png" width="600"/>
   <br><em>Connect power supply 24V DC</em>
 </p>
 
+## Use PiCtory for enabling your setup for use with HA
+Before you can use the integration in HA you need to make sure your RevPI setup is configured.
+This goes via included PiCtory tool accessible via the URL of your RevPI CPU, see pictures above.
+This tutorial is not meant for detailed RevPI knowledge, please use RevPI provided material for that.<BR>
+Make sure of the following: <BR>
+1. Chose 'Open' button on top left to open Pictory in the Web default page (see picture above).<BR>
+2. In PiCtory: Drag and drop your devices (CPU and Modules) in the exact order in the setup<BR>
+3. Save your configuration (File, Save / Save as default config). The name of the rsc file you need for the integration setup!
+
 ## Installation of Home Assistant on RevPI CPU
+Setting up HA on your RevPI goes via the terminal, accessible via the default web home page after login (menu on the left).<BR>
+See above how to login.
+First install Docker.<BR>
+
+```
+curl -fsSL https://get.docker.com -o get-docker.sh
+sudo sh get-docker.sh
+```
+
+create the file to run the Docker container (can be helpfull for later)<BR>
+
+```
+sudo nano run-home-assistant.sh
+```
+
+Copy past this text in the nano editor:<BR>
+
+```
+sudo docker run -d \
+  --name homeassistant \
+  --privileged \
+  --restart=unless-stopped \
+  --device=/dev/piControl0 \
+  -e TZ=Europe/Amsterdam \
+  -v /home/pi/homeassistant:/config \
+  -v /var/www/revpi/pictory/projects:/var/www/revpi/pictory/projects:ro \
+  -v /dev:/dev \
+  -p 8123:8123 \
+  homeassistant/home-assistant:stable
+```
+Change the timezone above if needed for your installation.
+Some items are passed on to the container to ensure we can execute...
+For example if you want to use a USB device in HA make sure you pass that via --device=/dev/ttyTheRightPort
+
+To close nano: ctrl-x chose y(es) to write file.
+Make sure the file is executable: <BR>
+
+```
+sudo chown 777 run-home-assistant.sh
+```
+now run the container to start HA (this is reboot safe due to options given when constructing the container).
+Meaning when all goes well you don't have to ever run this start up script again (unless you want to change parameters).
+
+```
+./run-home-assistant.sh
+```
+
+## Installation of HACS for Home Assistant on RevPI CPU
+Setting up HACS on your RevPI goes via the terminal, accessible via the default web home page after login (menu on the left).<BR>
+See above how to login.
+First make sure you have installed HA and the container is running (step above).
+```
+sudo docker exec -it homeassistant bash -c "wget -O - https://get.hacs.xyz | bash -"
+sudo docker restart homeassistant
+```
+The rest is default HACS install (in HA go to settings --> devices and services --> button 'Add Integration' --> chose HACS --> follow rest of steps
