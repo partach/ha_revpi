@@ -12,6 +12,7 @@ Entities created (when a building device has a "control" section):
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import logging
 from typing import TYPE_CHECKING, Any
 
@@ -129,10 +130,8 @@ class RevPiPIDEnableSwitch(CoordinatorEntity, SwitchEntity):
         task = getattr(self._handler, "_pid_task", None)
         if task is not None and not task.done():
             task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await task
-            except asyncio.CancelledError:
-                pass
             _LOGGER.info("PID disabled for %s", self._handler.name)
         self._handler._pid_task = None  # type: ignore[attr-defined]
         self.async_write_ha_state()
