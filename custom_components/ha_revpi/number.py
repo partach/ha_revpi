@@ -49,11 +49,11 @@ async def async_setup_entry(
                     RevPiAnalogueOutputNumber(coordinator, entry, io_info)
                 )
 
-    # Add building device number entities (valve positions)
+    # Add building device number entities (valve positions, PID params, etc.)
     handlers = hub_data.get("building_handlers", [])
     for handler in handlers:
         for entity in handler.get_entities():
-            if isinstance(entity, RevPiBuildingValveNumber):
+            if isinstance(entity, NumberEntity):
                 entities.append(entity)
 
     async_add_entities(entities)

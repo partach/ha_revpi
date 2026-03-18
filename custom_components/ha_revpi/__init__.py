@@ -183,17 +183,22 @@ async def _start_pid_controllers(
     hass: HomeAssistant, entry: ConfigEntry
 ) -> None:
     """Start PID controller async tasks for building devices that have them."""
-    from .devices.pid import start_pid_task
+    from .devices.pid import ensure_pid_controller, start_pid_task
 
     hub_data = hass.data[DOMAIN][entry.entry_id]
     handlers = hub_data.get("building_handlers", [])
     pid_tasks = []
 
     for handler in handlers:
+        # Always create the PID controller instance so parameter
+        # entities can read/write values even when the loop is stopped
+        ensure_pid_controller(handler)
+
         control = handler.config.get("control", {})
         if control.get("enabled"):
             task = start_pid_task(hass, handler)
             if task:
+                handler._pid_task = task  # type: ignore[attr-defined]
                 pid_tasks.append(task)
                 _LOGGER.info(
                     "Started PID controller for %s", handler.name

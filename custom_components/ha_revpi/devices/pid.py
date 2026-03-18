@@ -197,6 +197,28 @@ async def _pid_loop(
             await asyncio.sleep(sample_interval)
 
 
+def ensure_pid_controller(handler: BuildingDeviceHandler) -> PIDController | None:
+    """Ensure a PIDController instance exists on the handler.
+
+    Creates one from config if not present. This allows parameter
+    entities to read/write values even when the PID loop is not running.
+    Returns None if no PID control section is configured.
+    """
+    existing = getattr(handler, "pid_controller", None)
+    if existing is not None:
+        return existing
+
+    control = handler.config.get("control", {})
+    if control.get("type") != "pid":
+        return None
+
+    params_dict = control.get("params", {})
+    params = PIDParams.from_dict(params_dict)
+    controller = PIDController(params)
+    handler.pid_controller = controller  # type: ignore[attr-defined]
+    return controller
+
+
 def start_pid_task(
     hass: HomeAssistant,
     handler: BuildingDeviceHandler,
@@ -209,9 +231,9 @@ def start_pid_task(
     if not control.get("enabled"):
         return None
 
-    params_dict = control.get("params", {})
-    params = PIDParams.from_dict(params_dict)
-    controller = PIDController(params)
+    controller = ensure_pid_controller(handler)
+    if controller is None:
+        return None
 
     sample_interval = float(
         control.get("sample_interval", DEFAULT_PID_SAMPLE_INTERVAL)
@@ -225,9 +247,6 @@ def start_pid_task(
             handler.name,
         )
         return None
-
-    # Store controller on handler so climate entity can update setpoint
-    handler.pid_controller = controller  # type: ignore[attr-defined]
 
     task = hass.async_create_task(
         _pid_loop(
