@@ -8,14 +8,14 @@ RevPI CPU and RevPI module support for Home Assistant
 
 
 <p align="center">
-<img src="https://github.com/partach/ha_revpi/blob/main/pictures/revpi-connect-5.png" width="200" style="vertical-align: middle; margin: 0 10px;"/>
+<img src="https://github.com/partach/ha_revpi/blob/main/pictures/revpi-connect-5.png" width="400" style="vertical-align: middle; margin: 0 10px;"/>
 <br><em>RevPi connect 5 with expansion modules</em>
 </p>
 
 
 <p align="center">
-  <img src="https://github.com/partach/ha_revpi/blob/main/pictures/screenshot-pictory.png" width="600"/>
-  <br><em>Pictory tool embedded in RevPi</em>
+  <img src="https://github.com/partach/ha_revpi/blob/main/pictures/screenshot-pictory.png" width="500"/>
+  <br><em>Pictory tool embedded in RevPi needed to setup your configuration</em>
 </p>
 
 ## Features
@@ -37,12 +37,20 @@ Let the install config of the integration guide you as it asks you for the neede
 
 ## Setting up RevPI CPU
 1. unbox your goodies. Pay special attention to right side of CPU. It states the **URL and password** to connect to your CPU!
-2. Best to use a DIN rail; Connect 24V power supply to CPU and module(s), see picture
+2. Write it down ** URL and password** as you need it later.
+3. Best to use a DIN rail; Connect 24V power supply to CPU and module(s), see picture
 <p align="center">
-  <img src="https://github.com/partach/ha_revpi/blob/main/pictures/revpi-power.png" width="600"/>
-  <br><em>Pictory tool embedded in RevPi</em>
+  <img src="https://github.com/partach/ha_revpi/blob/main/pictures/revpi-power.png" width="200"/>
+  <br><em>Connect power supply 24V DC</em>
 </p>
 3. Connect network (wired out of the box, wireless is option). We assume now wired in this example
-4. Use browser on same network. Use the data gathered in step 1. Example: https://revpi123456.local:41443 (see right side of CPU housing)
+4. Use browser on same network. Use the data gathered in step 1. Example: https://revpi123456.local:41443 (see right side of CPU housing for actual serial number)
+5. If all ok you get a login screen. User: pi , Password: as written down during unboxing in step 1.
+6. You are now logged in! If not, repeat previous steps to see if you missed anything
+7. On the right side of the menu, go to 'Software update' (if you are linux savvy you can use apt in the terminal...) 
+<p align="center">
+  <img src="https://github.com/partach/ha_revpi/blob/main/pictures/revpi-power.png" width="200"/>
+  <br><em>Connect power supply 24V DC</em>
+</p>
 
 ## Installation of Home Assistant on RevPI CPU
