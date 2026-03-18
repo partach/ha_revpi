@@ -176,7 +176,8 @@ Now add your HA host to the allowed list:
 ```
 sudo nano /etc/revpipyload/aclplcserver.conf
 ```
-Add the IP of your local HA instance there.
+Add the IP and ACL level of your local HA instance there like 192.168.x.x,2
+ACL level 2 is read/write (1 is read only)
 
 Then restart:
 ```
