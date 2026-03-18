@@ -185,6 +185,7 @@ class RevPiConfigFlow(ConfigFlow, domain=DOMAIN):
 # -----------------------------------------------------------------------
 
 MENU_ADD_DEVICE = "add_building_device"
+MENU_EDIT_DEVICE = "edit_building_device"
 MENU_REMOVE_DEVICE = "remove_building_device"
 
 
@@ -194,6 +195,7 @@ class RevPiOptionsFlowHandler(OptionsFlow):
     def __init__(self) -> None:
         """Initialize."""
         self._selected_template: dict[str, Any] | None = None
+        self._edit_device_index: int | None = None
 
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None
@@ -203,6 +205,8 @@ class RevPiOptionsFlowHandler(OptionsFlow):
             action = user_input.get("action")
             if action == MENU_ADD_DEVICE:
                 return await self.async_step_add_building_device()
+            if action == MENU_EDIT_DEVICE:
+                return await self.async_step_edit_building_device()
             if action == MENU_REMOVE_DEVICE:
                 return await self.async_step_remove_building_device()
 
@@ -234,6 +238,7 @@ class RevPiOptionsFlowHandler(OptionsFlow):
             MENU_ADD_DEVICE: f"Add building device ({device_count} configured)",
         }
         if device_count > 0:
+            actions[MENU_EDIT_DEVICE] = "Edit building device IO mapping"
             actions[MENU_REMOVE_DEVICE] = "Remove building device"
 
         return self.async_show_form(
@@ -470,6 +475,161 @@ class RevPiOptionsFlowHandler(OptionsFlow):
                     vol.Optional(
                         f"io_{key}",
                         default=default_io,
+                        description={"suffix": f"({label})"},
+                    )
+                ] = str
+
+        return vol.Schema(schema_dict)
+
+    async def async_step_edit_building_device(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Select a building device to edit."""
+        devices = list(
+            self.config_entry.options.get(CONF_BUILDING_DEVICES, [])
+        )
+
+        if user_input is not None:
+            index = int(user_input["device_index"])
+            if 0 <= index < len(devices):
+                self._edit_device_index = index
+                return await self.async_step_edit_building_device_ios()
+            return await self.async_step_init()
+
+        if not devices:
+            return self.async_abort(reason="no_building_devices")
+
+        choices = {
+            str(i): dev.get("name", f"Device {i}")
+            for i, dev in enumerate(devices)
+        }
+
+        return self.async_show_form(
+            step_id="edit_building_device",
+            data_schema=vol.Schema(
+                {vol.Required("device_index"): vol.In(choices)}
+            ),
+        )
+
+    async def async_step_edit_building_device_ios(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Edit IO mappings for an existing building device."""
+        devices = list(
+            self.config_entry.options.get(CONF_BUILDING_DEVICES, [])
+        )
+        index = self._edit_device_index
+        if index is None or index >= len(devices):
+            return await self.async_step_init()
+
+        device = devices[index]
+
+        if user_input is not None:
+            from .template_utils import validate_io_mapping
+
+            device_name = user_input.get("device_name", device["name"])
+
+            # Update io_name values from user input
+            for key in device.get("ios", {}):
+                input_key = f"io_{key}"
+                if input_key in user_input:
+                    device["ios"][key]["io_name"] = user_input[input_key]
+
+            # Validate: check for unmapped IOs
+            unmapped = [
+                key
+                for key, io_conf in device.get("ios", {}).items()
+                if not io_conf.get("io_name", "").strip()
+            ]
+            if unmapped:
+                details = "Not mapped: " + ", ".join(
+                    f"**{k}**" for k in unmapped
+                )
+                return self.async_show_form(
+                    step_id="edit_building_device_ios",
+                    data_schema=self._build_edit_schema(device),
+                    errors={"base": "io_not_found"},
+                    description_placeholders={"errors": details},
+                )
+
+            # Validate IO names exist in coordinator
+            coordinator = self._get_coordinator()
+            available_ios: set[str] = set()
+            if coordinator and coordinator.data:
+                available_ios = set(coordinator.data.io_values.keys())
+
+            if available_ios:
+                errors_list = validate_io_mapping(device, available_ios)
+                if errors_list:
+                    _LOGGER.warning(
+                        "IO mapping validation: %s", errors_list
+                    )
+                    missing_names = []
+                    for key, io_conf in device.get("ios", {}).items():
+                        io_name = io_conf.get("io_name", "")
+                        if io_name not in available_ios:
+                            missing_names.append(
+                                f"**{io_name}** ({key})"
+                            )
+                    details = (
+                        "Not found: " + ", ".join(missing_names)
+                        if missing_names
+                        else ""
+                    )
+                    return self.async_show_form(
+                        step_id="edit_building_device_ios",
+                        data_schema=self._build_edit_schema(device),
+                        errors={"base": "io_not_found"},
+                        description_placeholders={"errors": details},
+                    )
+
+            # Save updated device
+            device["name"] = device_name
+            devices[index] = device
+            new_options = dict(self.config_entry.options)
+            new_options[CONF_BUILDING_DEVICES] = devices
+            self._edit_device_index = None
+            return self.async_create_entry(title="", data=new_options)
+
+        return self.async_show_form(
+            step_id="edit_building_device_ios",
+            data_schema=self._build_edit_schema(device),
+            description_placeholders={"errors": ""},
+        )
+
+    def _build_edit_schema(
+        self, device: dict[str, Any]
+    ) -> vol.Schema:
+        """Build schema for editing an existing device's IO mappings.
+
+        Same dropdown logic as _build_confirm_schema but for saved devices.
+        """
+        schema_dict: dict[Any, Any] = {
+            vol.Optional(
+                "device_name", default=device["name"]
+            ): str,
+        }
+
+        for key, io_conf in device.get("ios", {}).items():
+            label = io_conf.get("description") or key
+            current_io = io_conf.get("io_name", "")
+            compatible = self._get_compatible_ios(io_conf)
+
+            if compatible:
+                # Pre-select the currently mapped IO if it's compatible
+                default_io = current_io if current_io in compatible else ""
+                schema_dict[
+                    vol.Optional(
+                        f"io_{key}",
+                        default=default_io,
+                        description={"suffix": f"({label})"},
+                    )
+                ] = vol.In({"": f"-- Select {label} --", **compatible})
+            else:
+                schema_dict[
+                    vol.Optional(
+                        f"io_{key}",
+                        default=current_io,
                         description={"suffix": f"({label})"},
                     )
                 ] = str
