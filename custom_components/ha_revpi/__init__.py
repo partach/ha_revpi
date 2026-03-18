@@ -131,6 +131,10 @@ async def update_listener(
     hass: HomeAssistant, entry: ConfigEntry
 ) -> None:
     """Handle options update — reload if structural settings changed."""
+    hub_data = hass.data.get(DOMAIN, {}).get(entry.entry_id, {})
+    if hub_data.pop("skip_reload", False):
+        _LOGGER.debug("Options updated for %s (PID config only), skipping reload", entry.title)
+        return
     _LOGGER.info("Options updated for %s, reloading", entry.title)
     await hass.config_entries.async_reload(entry.entry_id)
 
