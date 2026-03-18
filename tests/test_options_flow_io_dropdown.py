@@ -3,9 +3,7 @@
 from __future__ import annotations
 
 from typing import Any
-from unittest.mock import MagicMock, patch
-
-import pytest
+from unittest.mock import MagicMock
 
 from custom_components.ha_revpi.config_flow import RevPiOptionsFlowHandler
 from custom_components.ha_revpi.const import (
@@ -48,7 +46,7 @@ def _make_mock_coordinator(
     coord = MagicMock()
     coord.get_all_io_info.return_value = dict(io_infos)
     data = MagicMock()
-    data.io_values = io_values or {name: 0 for name in io_infos}
+    data.io_values = io_values or dict.fromkeys(io_infos, 0)
     coord.data = data
     return coord
 
