@@ -209,7 +209,7 @@ Type: `"ahu"` — Creates a **Climate** entity as the primary control, plus sens
 | `filter_alarm` | input | bool | No | Binary Sensor | Filter differential pressure alarm |
 | `frost_alarm` | input | bool | No | Binary Sensor | Frost protection alarm |
 
-The Climate entity supports HVAC modes OFF, HEAT, and AUTO (when PID is enabled). The `hvac_action` is derived from fan status and valve position.
+The Climate entity supports HVAC modes OFF, HEAT, and AUTO (when PID is enabled). When a `cooling_valve` IO is present, the COOL mode is also available. The `hvac_action` is derived from fan status and valve positions — reporting COOLING when the cooling valve is open (>5%), HEATING when the heating valve is open, or IDLE otherwise.
 
 ### Fan
 
@@ -760,7 +760,7 @@ Below is a fully annotated AHU template using every available feature:
 ```
 
 This template:
-- Creates a **Climate** entity (the main AHU control) with OFF/HEAT/AUTO modes
+- Creates a **Climate** entity (the main AHU control) with OFF/HEAT/AUTO modes (COOL is added when a `cooling_valve` IO is defined)
 - Creates a **Binary Sensor** for the filter alarm
 - Creates **Sensor** entities monitoring heating valve and damper positions
 - Can optionally run a **PID controller** that reads `supply_temp` and drives `heating_valve` (set `"enabled": true` to activate)

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING, Any, ClassVar
+from typing import TYPE_CHECKING, Any
 
 from homeassistant.components.climate import (
     ClimateEntity,
@@ -24,6 +24,14 @@ if TYPE_CHECKING:
     from .devices.base import BuildingDeviceHandler
 
 _LOGGER = logging.getLogger(__name__)
+
+_HEAT_ONLY_MODES: list[HVACMode] = [HVACMode.OFF, HVACMode.HEAT, HVACMode.AUTO]
+_HEAT_COOL_MODES: list[HVACMode] = [
+    HVACMode.OFF,
+    HVACMode.HEAT,
+    HVACMode.COOL,
+    HVACMode.AUTO,
+]
 
 
 async def async_setup_entry(
@@ -50,7 +58,6 @@ class RevPiBuildingClimate(CoordinatorEntity, ClimateEntity):
 
     _attr_has_entity_name = True
     _attr_temperature_unit = UnitOfTemperature.CELSIUS
-    _attr_hvac_modes: ClassVar[list[HVACMode]] = [HVACMode.OFF, HVACMode.HEAT, HVACMode.AUTO]
     _attr_supported_features = (
         ClimateEntityFeature.TARGET_TEMPERATURE
         | ClimateEntityFeature.TURN_ON
@@ -76,6 +83,12 @@ class RevPiBuildingClimate(CoordinatorEntity, ClimateEntity):
         self._fan_cmd_mapping = handler.get_io_by_role("fan_command")
         self._fan_status_mapping = handler.get_io_by_role("fan_status")
         self._heating_valve_mapping = handler.get_io_by_role("heating_valve")
+        self._cooling_valve_mapping = handler.get_io_by_role("cooling_valve")
+
+        # Expose COOL mode only when a cooling valve is configured
+        self._attr_hvac_modes = (
+            _HEAT_COOL_MODES if self._cooling_valve_mapping else _HEAT_ONLY_MODES
+        )
 
     @property
     def current_temperature(self) -> float | None:
@@ -105,6 +118,13 @@ class RevPiBuildingClimate(CoordinatorEntity, ClimateEntity):
             if not fan_on:
                 return HVACAction.IDLE
 
+        if self._cooling_valve_mapping:
+            valve_pct = self._handler.read_io_engineering(
+                self._cooling_valve_mapping
+            )
+            if valve_pct is not None and valve_pct > 5:
+                return HVACAction.COOLING
+
         if self._heating_valve_mapping:
             valve_pct = self._handler.read_io_engineering(
                 self._heating_valve_mapping
@@ -130,7 +150,7 @@ class RevPiBuildingClimate(CoordinatorEntity, ClimateEntity):
             self.async_write_ha_state()
 
     async def async_set_hvac_mode(self, hvac_mode: HVACMode) -> None:
-        """Set HVAC mode (off/heat/auto)."""
+        """Set HVAC mode (off/heat/cool/auto)."""
         self._hvac_mode = hvac_mode
 
         if hvac_mode == HVACMode.OFF:
@@ -142,7 +162,29 @@ class RevPiBuildingClimate(CoordinatorEntity, ClimateEntity):
                 await self._handler.write_io_engineering(
                     self._heating_valve_mapping, 0.0
                 )
-        elif hvac_mode in (HVACMode.HEAT, HVACMode.AUTO):
+            if self._cooling_valve_mapping:
+                await self._handler.write_io_engineering(
+                    self._cooling_valve_mapping, 0.0
+                )
+        elif hvac_mode == HVACMode.HEAT:
+            if self._fan_cmd_mapping:
+                await self._handler.write_io_engineering(
+                    self._fan_cmd_mapping, True
+                )
+            if self._cooling_valve_mapping:
+                await self._handler.write_io_engineering(
+                    self._cooling_valve_mapping, 0.0
+                )
+        elif hvac_mode == HVACMode.COOL:
+            if self._fan_cmd_mapping:
+                await self._handler.write_io_engineering(
+                    self._fan_cmd_mapping, True
+                )
+            if self._heating_valve_mapping:
+                await self._handler.write_io_engineering(
+                    self._heating_valve_mapping, 0.0
+                )
+        elif hvac_mode == HVACMode.AUTO:
             if self._fan_cmd_mapping:
                 await self._handler.write_io_engineering(
                     self._fan_cmd_mapping, True
