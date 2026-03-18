@@ -1,10 +1,6 @@
 """Tests for the options flow IO dropdown selectors."""
 
 from __future__ import annotations
-
-from typing import Any
-from unittest.mock import MagicMock
-
 from custom_components.ha_revpi.config_flow import RevPiOptionsFlowHandler
 from custom_components.ha_revpi.const import (
     DOMAIN,
@@ -12,6 +8,8 @@ from custom_components.ha_revpi.const import (
     IO_TYPE_OUT,
 )
 from custom_components.ha_revpi.coordinator import RevPiIOInfo
+from typing import Any
+from unittest.mock import MagicMock
 
 
 # ---------------------------------------------------------------------------
