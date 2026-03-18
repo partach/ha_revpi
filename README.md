@@ -37,7 +37,32 @@ Options:
    * The integration: In UI go to `HACS`--> `custom repositories` --> `Repo`: partach/ha_revpi, `Type`: Integration
    * After HA reboot (Needed for new integrations): choose 'add integration' (in devices and services) and choose `ha_revpi` in the list.
      
-Let the install config of the integration guide you as it asks you for the needed data.
+Let the install config of the integration guide you as it asks you for the needed data, see next step.
+
+## Using the integration.
+When following above steps your with adding the integration you are presented with the setup dialog of the integration:<BR>
+<p align="center">
+  <img src="https://github.com/partach/ha_revpi/blob/main/pictures/revpi-install.png" width="300"/>
+  <br><em>Installation screen of the integration</em>
+</p>
+Choose local (default) if you are running HA directly on the RevPI (installation steps below)
+The config rsc file name and location should be filled in (how you saved the file in PiCtory, see below).<BR>
+Submit. If all was done correctly the integration will automaticall detect the CPU and modules.
+<p align="center">
+  <img src="https://github.com/partach/ha_revpi/blob/main/pictures/revpi-integration1.png" width="300"/>
+  <br><em>Installation screen of the integration</em>
+</p>
+
+## Using the HA Lovelace card.
+The card is automatically installed and can be used on your dashboard.<BR>
+When adding the card select the installed device in the visual setup of adding the card.
+You can chose all found devices and the card will show that information.
+The card is specific to a module
+<p align="center">
+  <img src="https://github.com/partach/ha_revpi/blob/main/pictures/revpi-card.png" width="300"/>
+  <br><em>Dashboard example</em>
+</p>
+
 
 ## Setting up RevPI CPU
 1. unbox your goodies. Pay special attention to right side of CPU. It states the **URL and password** to connect to your CPU!<BR>
@@ -124,3 +149,18 @@ sudo docker exec -it homeassistant bash -c "wget -O - https://get.hacs.xyz | bas
 sudo docker restart homeassistant
 ```
 The rest is default HACS install (in HA go to settings --> devices and services --> button 'Add Integration' --> chose HACS --> follow rest of steps
+
+## Discussion 
+See [here](https://github.com/partach/ha_revpi/discussions)
+
+## Changelog
+See [CHANGELOG.md](https://github.com/partach/ha_revpi/blob/main/CHANGELOG.md)
+
+## Issues
+Report at GitHub [Issues](https://github.com/partach/ha_revpi/issues)
+
+## Support development
+Are you working at RevPI? I could always use modules to test and integrate! Please reach out!
+If you like this work, and find it usefull, or want to support this and future developments, it would be greatly appreciated :)
+
+[![Donate](https://img.shields.io/badge/Donate-PayPal-green.svg?style=flat-square)](https://paypal.me/therealbean)
