@@ -60,8 +60,12 @@ def mock_revpi_io() -> MagicMock:
     mio_di_2 = _make_io("InputValue_2", address=30, length=0, io_type=300, value=False)
     mio_do_1 = _make_io("OutputValue_1", address=31, length=0, io_type=301, value=False)
     mio_do_2 = _make_io("OutputValue_2", address=31, length=0, io_type=301, value=True)
-    mio_reserved_1 = _make_io("InputValue_1_reserved", address=32, length=0, io_type=300, value=False)
-    mio_reserved_2 = _make_io("OutputValue_1_reserved", address=33, length=0, io_type=301, value=False)
+    mio_reserved_1 = _make_io(
+        "InputValue_1_reserved", address=32, length=0, io_type=300, value=False,
+    )
+    mio_reserved_2 = _make_io(
+        "OutputValue_1_reserved", address=33, length=0, io_type=301, value=False,
+    )
     mio_ai_1 = _make_io("InputValue_3", address=34, length=2, io_type=300, value=500)
 
     mio_device = MagicMock()
@@ -72,9 +76,16 @@ def mock_revpi_io() -> MagicMock:
     mio_device.get_outputs.return_value = [mio_do_1, mio_do_2, mio_reserved_2]
 
     # Device iteration — revpimodio2 iterates device objects directly
-    revpi.device.__iter__ = MagicMock(return_value=iter([dio_device, aio_device, ro_device, mio_device]))
+    devs = [dio_device, aio_device, ro_device, mio_device]
+    revpi.device.__iter__ = MagicMock(return_value=iter(devs))
+    dev_map = {
+        "dio01": dio_device,
+        "aio01": aio_device,
+        "ro01": ro_device,
+        "mio01": mio_device,
+    }
     revpi.device.__getitem__ = MagicMock(
-        side_effect=lambda k: {"dio01": dio_device, "aio01": aio_device, "ro01": ro_device, "mio01": mio_device}[k]
+        side_effect=lambda k: dev_map[k]
     )
 
     # IO access

@@ -98,9 +98,7 @@ def _is_digital_io(io_obj: Any) -> bool:
     """
     if io_obj.length == 0:
         return True
-    if isinstance(io_obj.value, bool):
-        return True
-    return False
+    return isinstance(io_obj.value, bool)
 
 
 def _is_reserved_io(io_obj: Any) -> bool:
