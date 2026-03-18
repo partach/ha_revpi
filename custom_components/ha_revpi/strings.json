@@ -44,7 +44,7 @@
       },
       "confirm_building_device": {
         "title": "Configure Building Device",
-        "description": "Confirm device name and map IO points to your piCtory configuration.",
+        "description": "Confirm device name and map IO points to your piCtory configuration.\n{errors}",
         "data": {
           "device_name": "Device name"
         }
@@ -59,7 +59,7 @@
     },
     "error": {
       "template_load_failed": "Failed to load the selected template.",
-      "io_not_found": "One or more IO names not found in the RevPi. Check your piCtory configuration."
+      "io_not_found": "Some IO names were not found in the RevPi process image. Check the names match your piCtory configuration."
     },
     "abort": {
       "no_templates": "No device templates found. Place JSON templates in the ha_revpi/templates directory.",

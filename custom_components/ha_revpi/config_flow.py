@@ -327,13 +327,24 @@ class RevPiOptionsFlowHandler(OptionsFlow):
                     _LOGGER.warning(
                         "IO mapping validation: %s", errors_list
                     )
+                    # Extract just the missing IO names for a clean message
+                    missing_names = []
+                    for key, io_conf in template.get("ios", {}).items():
+                        io_name = io_conf.get("io_name", "")
+                        if io_name not in available_ios:
+                            missing_names.append(
+                                f"**{io_name}** ({key})"
+                            )
+                    details = (
+                        "Not found: " + ", ".join(missing_names)
+                        if missing_names
+                        else ""
+                    )
                     return self.async_show_form(
                         step_id="confirm_building_device",
                         data_schema=self._build_confirm_schema(template),
                         errors={"base": "io_not_found"},
-                        description_placeholders={
-                            "errors": "\n".join(errors_list)
-                        },
+                        description_placeholders={"errors": details},
                     )
 
             # Build device config to persist
@@ -362,6 +373,7 @@ class RevPiOptionsFlowHandler(OptionsFlow):
         return self.async_show_form(
             step_id="confirm_building_device",
             data_schema=self._build_confirm_schema(template),
+            description_placeholders={"errors": ""},
         )
 
     def _build_confirm_schema(

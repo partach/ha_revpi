@@ -30,9 +30,39 @@
       "init": {
         "data": {
           "poll_interval": "Poll interval (seconds)",
-          "configrsc": "piCtory config file path"
+          "configrsc": "piCtory config file path",
+          "action": "Building device management"
+        }
+      },
+      "add_building_device": {
+        "title": "Add Building Device",
+        "description": "Select a device template to add.",
+        "data": {
+          "template": "Device template"
+        }
+      },
+      "confirm_building_device": {
+        "title": "Configure Building Device",
+        "description": "Confirm device name and map IO points to your piCtory configuration.\n{errors}",
+        "data": {
+          "device_name": "Device name"
+        }
+      },
+      "remove_building_device": {
+        "title": "Remove Building Device",
+        "description": "Select a building device to remove.",
+        "data": {
+          "device_index": "Device to remove"
         }
       }
+    },
+    "error": {
+      "template_load_failed": "Failed to load the selected template.",
+      "io_not_found": "Some IO names were not found in the RevPi process image. Check the names match your piCtory configuration."
+    },
+    "abort": {
+      "no_templates": "No device templates found. Place JSON templates in the ha_revpi/templates directory.",
+      "no_building_devices": "No building devices configured."
     }
   }
 }
