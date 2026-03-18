@@ -21,6 +21,19 @@ It is beyond the goal of this tutorial to explain those. For RevPI basics look a
   <br><em>Pictory tool embedded in RevPi needed to setup your configuration</em>
 </p>
 
+## Table of Contents
+
+- [Features](#features)
+- [Installation](#installation-of-the-integration)
+- [General usage](#using-the-integration)
+- [Usage of the Card](#using-the-home-assistant-lovelace-card)
+- [Setup Revpi](#setting-up-revpi-cpu)
+- [Use PiCtory](#use-pictory-for-enabling-your-setup-for-use-with-ha)
+- [Installing HA on RevPI](#installation-of-home-assistant-on-revpi-cpu)
+- [Install HACS on RevPI](#installation-of-hacs-for-home-assistant-on-revpi-cpu)
+- [Integration on Remote HA client](#run-integration-on-other-ha-installation-in-the-network)
+
+
 ## Features
 - Integration runs directly on RevPi or on a remote HA installation on the same network
 - Full control read / write of IOs via HA integration and via Card!
