@@ -92,7 +92,7 @@ The card is interactive so you can also change values here (depending on how you
 
 <p align="center">
   <img src="https://github.com/partach/ha_revpi/blob/main/pictures/revpi-main-web.png" width="600"/>
-  <br><em>Connect power supply 24V DC</em>
+  <br><em>Main RevPI Web management page</em>
 </p>
 
 ## Use PiCtory for enabling your setup for use with HA
