@@ -3,7 +3,7 @@
 [![HACS Action](https://img.shields.io/github/actions/workflow/status/partach/ha_revpi/validate-hacs.yml?label=HACS%20Action&style=flat-square)](https://github.com/partach/ha_revpi/actions)
 [![License](https://img.shields.io/github/license/partach/ha_revpi?color=ffca28&style=flat-square)](https://github.com/partach/ha_revpi/blob/main/LICENSE)
 [![HACS validated](https://img.shields.io/badge/HACS-validated-41BDF5?style=flat-square)](https://github.com/hacs/integration)
-# RevPI for Home Assistant: ha_revpi
+# Home Assistant on RevPI: ha_revpi
 RevPI CPU and RevPI module support for Home Assistant<BR>
 
 The below tutorial is focussed on the main steps and skips details on standard RevPI knowledge or linux knowledge for that matter.<BR>
