@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 
 from homeassistant.components.number import NumberDeviceClass, NumberEntity, NumberMode
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN, MODULE_TYPE_AIO, MODULE_TYPE_MIO
 from .entity import RevPiEntity
@@ -16,6 +17,7 @@ if TYPE_CHECKING:
     from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
     from .coordinator import RevPiCoordinator, RevPiIOInfo
+    from .devices.base import BuildingDeviceHandler, IOMapping
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -31,7 +33,8 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up Revolution Pi number entities based on the coordinator data."""
-    coordinator: RevPiCoordinator = hass.data[DOMAIN][entry.entry_id]["coordinator"]
+    hub_data = hass.data[DOMAIN][entry.entry_id]
+    coordinator: RevPiCoordinator = hub_data["coordinator"]
     modules = coordinator.get_modules()
 
     entities: list[NumberEntity] = []
@@ -42,7 +45,16 @@ async def async_setup_entry(
 
         for io_info in mod_info.outputs:
             if not io_info.is_digital:
-                entities.append(RevPiAnalogueOutputNumber(coordinator, entry, io_info))
+                entities.append(
+                    RevPiAnalogueOutputNumber(coordinator, entry, io_info)
+                )
+
+    # Add building device number entities (valve positions)
+    handlers = hub_data.get("building_handlers", [])
+    for handler in handlers:
+        for entity in handler.get_entities():
+            if isinstance(entity, RevPiBuildingValveNumber):
+                entities.append(entity)
 
     async_add_entities(entities)
 
@@ -88,3 +100,54 @@ class RevPiAnalogueOutputNumber(RevPiEntity, NumberEntity):
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator."""
         super()._handle_coordinator_update()
+
+
+# ---------------------------------------------------------------------------
+# Building device number entity (valve position)
+# ---------------------------------------------------------------------------
+
+
+class RevPiBuildingValveNumber(CoordinatorEntity, NumberEntity):
+    """Number entity for a building device valve position (0-100%)."""
+
+    _attr_has_entity_name = True
+    _attr_icon = "mdi:valve"
+    _attr_mode = NumberMode.SLIDER
+    _attr_native_min_value = 0.0
+    _attr_native_max_value = 100.0
+    _attr_native_step = 1.0
+
+    def __init__(
+        self,
+        handler: BuildingDeviceHandler,
+        mapping: IOMapping,
+    ) -> None:
+        """Initialize."""
+        super().__init__(handler.coordinator)
+        self._handler = handler
+        self._mapping = mapping
+        self._attr_unique_id = (
+            f"{handler.device_id}_{mapping.logical_name}_number"
+        )
+        self._attr_name = (
+            mapping.description
+            or mapping.role.replace("_", " ").title()
+        )
+        self._attr_device_info = handler.device_info
+        if mapping.transform:
+            self._attr_native_unit_of_measurement = (
+                mapping.transform.unit
+            )
+
+    @property
+    def native_value(self) -> float | None:
+        """Return the current valve position."""
+        val = self._handler.read_io_engineering(self._mapping)
+        if val is None:
+            return None
+        return float(val)
+
+    async def async_set_native_value(self, value: float) -> None:
+        """Set the valve position."""
+        await self._handler.write_io_engineering(self._mapping, value)
+        self.async_write_ha_state()

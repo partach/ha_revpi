@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "name": "Exhaust Fan",
+  "type": "fan",
+  "description": "Simple exhaust fan with on/off and optional speed control",
+  "ios": {
+    "fan_command": {
+      "io_name": "DO_FAN_CMD",
+      "role": "fan_command",
+      "direction": "output",
+      "data_type": "bool",
+      "description": "Fan start/stop command"
+    },
+    "fan_status": {
+      "io_name": "DI_FAN_FB",
+      "role": "fan_status",
+      "direction": "input",
+      "data_type": "bool",
+      "description": "Fan running feedback"
+    },
+    "fan_speed": {
+      "io_name": "AO_FAN_SPEED",
+      "role": "speed_command",
+      "direction": "output",
+      "data_type": "analog",
+      "transform": {
+        "type": "linear",
+        "input_min": 0,
+        "input_max": 10000,
+        "output_min": 0.0,
+        "output_max": 100.0,
+        "unit": "%",
+        "precision": 0
+      },
+      "description": "Fan speed setpoint (0-10V = 0-100%)"
+    }
+  }
+}

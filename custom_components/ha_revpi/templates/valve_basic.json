@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "name": "Modulating Valve",
+  "type": "valve",
+  "description": "Modulating valve with position command and optional feedback",
+  "ios": {
+    "valve_position": {
+      "io_name": "AO_VALVE",
+      "role": "position_command",
+      "direction": "output",
+      "data_type": "analog",
+      "transform": {
+        "type": "linear",
+        "input_min": 0,
+        "input_max": 10000,
+        "output_min": 0.0,
+        "output_max": 100.0,
+        "unit": "%",
+        "precision": 0
+      },
+      "description": "Valve position command (0-10V = 0-100% open)"
+    },
+    "valve_feedback": {
+      "io_name": "AI_VALVE_FB",
+      "role": "position_feedback",
+      "direction": "input",
+      "data_type": "analog",
+      "transform": {
+        "type": "linear",
+        "input_min": 0,
+        "input_max": 10000,
+        "output_min": 0.0,
+        "output_max": 100.0,
+        "unit": "%",
+        "precision": 0
+      },
+      "description": "Valve position feedback (0-10V = 0-100%)"
+    }
+  }
+}

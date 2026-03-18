@@ -67,3 +67,13 @@ PLATFORMS: Final = ["sensor", "switch", "number", "select"]
 
 # Core device identifier suffix
 CORE_DEVICE_SUFFIX: Final = "_core"
+
+# Building device template constants
+CONF_BUILDING_DEVICES: Final = "building_devices"
+BUILDING_DEVICE_SUFFIX: Final = "_bld"
+
+# Building device platform extensions
+BUILDING_PLATFORMS: Final = ["climate", "fan", "cover"]
+
+# PID controller defaults
+DEFAULT_PID_SAMPLE_INTERVAL: Final = 1.0  # seconds
