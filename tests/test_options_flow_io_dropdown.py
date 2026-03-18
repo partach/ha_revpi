@@ -13,7 +13,6 @@ from custom_components.ha_revpi.const import (
 )
 from custom_components.ha_revpi.coordinator import RevPiIOInfo
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
