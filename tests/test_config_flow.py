@@ -5,10 +5,9 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from unittest.mock import MagicMock, patch
 
+import pytest
 from homeassistant import config_entries
 from homeassistant.data_entry_flow import FlowResultType
-
-import pytest
 
 from custom_components.ha_revpi.config_flow import _sanitize_host
 from custom_components.ha_revpi.const import (
