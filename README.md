@@ -27,42 +27,43 @@ It is beyond the goal of this tutorial to explain those. For RevPI basics look a
 - Comes with automatic HA card installation. Ready to be used on your dashboard.
 - No need for any yaml configuration!
 
-## Installation of Integration
+## Installation of the Integration
 Options:
 1. Install via HACS
-   * coming (first install HA and HACS on RevPi, see below)
-   * After HA reboot (Needed for new integrations): choose 'add integration' (in devices and services) and choose `ha_revpi` in the list.
+   * coming (first install Home Assistant and HACS on RevPi, see below)
+   * After Home Assistant reboot (Needed for new integrations): choose 'add integration' (in devices and services) and choose `ha_revpi` in the list.
 2. Install manually:
-   * First install HA and HACS on RevPi, see further below on RevPI installation steps
+   * First install Home Assistant and HACS on RevPi, see further below on RevPI installation steps
    * The integration: In UI go to `HACS`--> `custom repositories` --> `Repo`: partach/ha_revpi, `Type`: Integration
    * After HA reboot (Needed for new integrations): choose 'add integration' (in devices and services) and choose `ha_revpi` in the list.
      
 Let the install config of the integration guide you as it asks you for the needed data, see next step.
 
 ## Using the integration.
-When following above steps your with adding the integration you are presented with the setup dialog of the integration:<BR>
+When following above steps with adding the integration, you are presented with the setup dialog of the integration:<BR>
 <p align="center">
   <img src="https://github.com/partach/ha_revpi/blob/main/pictures/revpi-install.png" width="300"/>
   <br><em>Installation screen of the integration</em>
 </p>
-Choose local (default) if you are running HA directly on the RevPI (installation steps below)
-The config rsc file name and location should be filled in (how you saved the file in PiCtory, see below).<BR>
-Submit. If all was done correctly the integration will automaticall detect the CPU and modules.
+Choose local (default) if you are running Home Assistant directly on the RevPI (installation steps below). <BR>
+The `config rsc` file name and location should be filled in (how you saved the file in PiCtory, see below).<BR>
+`Submit` If all was done correctly the integration will automaticall detect the CPU and modules.<BR>
+<BR>
 <p align="center">
-  <img src="https://github.com/partach/ha_revpi/blob/main/pictures/revpi-integration1.png" width="300"/>
-  <br><em>Installation screen of the integration</em>
+  <img src="https://github.com/partach/ha_revpi/blob/main/pictures/revpi-integration1.png" width="500"/>
+  <br><em>Each found module is a device in Home Assistant</em>
 </p>
+All entities can be used as normal in Home Assistant in any way you like.
 
-## Using the HA Lovelace card.
+## Using the Home Assistant Lovelace card.
 The card is automatically installed and can be used on your dashboard.<BR>
-When adding the card select the installed device in the visual setup of adding the card.
-You can chose all found devices and the card will show that information.
-The card is specific to a module
+When adding the card select the installed device in the visual setup of adding the card.<BR>
+You can chose all found devices and the card will show that information. The card is specific to a module.
 <p align="center">
-  <img src="https://github.com/partach/ha_revpi/blob/main/pictures/revpi-card.png" width="300"/>
+  <img src="https://github.com/partach/ha_revpi/blob/main/pictures/revpi-card.png" width="500"/>
   <br><em>Dashboard example</em>
 </p>
-
+The card is interactive so you can also change values here (depending on how you setup the module in PiCtory)<BR>
 
 ## Setting up RevPI CPU
 1. unbox your goodies. Pay special attention to right side of CPU. It states the **URL and password** to connect to your CPU!<BR>
@@ -78,22 +79,24 @@ The card is specific to a module
 5. If all ok you get a login screen. User: pi , Password: as written down during unboxing in step 1.<BR>
 6. You are now logged in! If not, repeat previous steps to see if you missed anything<BR>
 7. On the right side of the menu, go to 'Software update' (if you are linux savvy you can use apt in the terminal...) <BR>
+<BR>
 <p align="center">
   <img src="https://github.com/partach/ha_revpi/blob/main/pictures/revpi-main-web.png" width="600"/>
   <br><em>Connect power supply 24V DC</em>
 </p>
 
 ## Use PiCtory for enabling your setup for use with HA
-Before you can use the integration in HA you need to make sure your RevPI setup is configured.
+Before you can use the integration in Home Assistant you need to make sure your RevPI setup is configured.
 This goes via included PiCtory tool accessible via the URL of your RevPI CPU, see pictures above.
 This tutorial is not meant for detailed RevPI knowledge, please use RevPI provided material for that.<BR>
 Make sure of the following: <BR>
-1. Chose 'Open' button on top left to open Pictory in the Web default page (see picture above).<BR>
+1. Chose `Open` button on top left to open Pictory in the Web default page (see picture above).<BR>
 2. In PiCtory: Drag and drop your devices (CPU and Modules) in the exact order in the setup<BR>
+3. Setup the module. For example MIO: make sure you mark `export` pre register you want to see in HA!
 3. Save your configuration (File, Save / Save as default config). The name of the rsc file you need for the integration setup!
 
 ## Installation of Home Assistant on RevPI CPU
-Setting up HA on your RevPI goes via the terminal, accessible via the default web home page after login (menu on the left).<BR>
+Setting up Home Assistant on your RevPI goes via the terminal, accessible via the default web home page after login (menu on the left).<BR>
 See above how to login.
 First install Docker.<BR>
 
