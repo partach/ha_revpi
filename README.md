@@ -46,6 +46,7 @@ When following above steps with adding the integration, you are presented with t
   <br><em>Installation screen of the integration</em>
 </p>
 Choose local (default) if you are running Home Assistant directly on the RevPI (installation steps below). <BR>
+(For remote connection see chapter below)
 The `config rsc` file name and location should be filled in (how you saved the file in PiCtory, see below).<BR>
 `Submit` If all was done correctly the integration will automaticall detect the CPU and modules.<BR>
 <BR>
@@ -152,6 +153,35 @@ sudo docker exec -it homeassistant bash -c "wget -O - https://get.hacs.xyz | bas
 sudo docker restart homeassistant
 ```
 The rest is default HACS install (in HA go to settings --> devices and services --> button 'Add Integration' --> chose HACS --> follow rest of steps
+
+
+## Run integration on other HA installation in the network
+With default settings of the RevPI this is not possible.<BR>
+You need to adapt (via terminal) some settings.
+
+[PLCSERVER] is disabled — plcserver = 0. This is the service RevPiNetIO connects to.<BR>
+[XMLRPC] is bound to localhost — bindip = 127.0.0.1, so it only accepts local connections.
+
+To fix both:
+```
+sudo nano /etc/revpipyload/revpipyload.conf
+```
+
+Change:
+
+[PLCSERVER] section: plcserver = 0 → plcserver = 1<BR>
+[XMLRPC] section: bindip = 127.0.0.1 → bindip = *<BR>
+<BR>
+Now add your HA host to the allowed list:
+```
+sudo nano /etc/revpipyload/aclplcserver.conf
+```
+Add the IP of your local HA instance there.
+
+Then restart:
+```
+sudo systemctl restart revpipyload
+```
 
 ## Discussion 
 See [here](https://github.com/partach/ha_revpi/discussions)
