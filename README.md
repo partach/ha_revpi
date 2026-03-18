@@ -149,6 +149,11 @@ If you want to know your RevPI IP address use:
 hostname -I
 ```
 
+If you want to have the HA terminal:
+```
+sudo docker exec -it homeassistant bash
+```
+
 ## Installation of HACS for Home Assistant on RevPI CPU
 Setting up HACS on your RevPI goes via the terminal, accessible via the default web home page after login (menu on the left).<BR>
 See above how to login.
