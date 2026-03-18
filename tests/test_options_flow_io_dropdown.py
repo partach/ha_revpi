@@ -7,8 +7,9 @@ from custom_components.ha_revpi.const import (
     IO_TYPE_OUT
 )
 from custom_components.ha_revpi.coordinator import RevPiIOInfo
-from typing import Any
-from unittest.mock import MagicMock
+from typing import Any, TYPE_CHECKING
+if TYPE_CHECKING:
+    from unittest.mock import MagicMock
 
 def _make_io_info(
     name: str,
