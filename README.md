@@ -120,7 +120,7 @@ Make sure of the following: <br>
 
 ## Installation of Home Assistant on RevPI CPU
 Setting up Home Assistant on your RevPI goes via the terminal, accessible via the default web home page after login (menu on the left).<br>
-See above how to login.
+See above how to login.<br>
 First install Docker.<br>
 
 ```
@@ -151,16 +151,17 @@ sudo docker run -d \
   homeassistant/home-assistant:stable
 ```
 Change the timezone above if needed for your installation.
-Some items are passed on to the container to ensure we can execute...
-For example if you want to use a USB device in HA make sure you pass that via --device=/dev/ttyTheRightPort
+Some items are passed on to the container to ensure we can execute...<br>
+For example if you want to use a USB device in HA make sure you pass that via<br>
+`--device=/dev/ttyTheRightPort`
 
-To close nano: ctrl-x choose y(es) to write file.
+To close nano: `ctrl-x` choose `y(es)` to write file.<br>
 Make sure the file is executable: <br>
 
 ```
 sudo chown +x run-home-assistant.sh
 ```
-now run the container to start HA (this is reboot safe due to options given when constructing the container).<br>
+Now run the container to start HA (this is reboot safe due to options given when constructing the container).<br>
 Meaning when all goes well you don't have to ever run this start up script again (unless you want to change parameters).
 
 ```
@@ -185,7 +186,8 @@ First make sure you have installed HA and the container is running (step above).
 sudo docker exec -it homeassistant bash -c "wget -O - https://get.hacs.xyz | bash -"
 sudo docker restart homeassistant
 ```
-The rest is default HACS install (in HA go to settings --> devices and services --> button 'Add Integration' --> choose HACS --> follow rest of steps
+The rest is default HACS install 
+In HA go to `settings --> devices and services --> button 'Add Integration' --> choose HACS --> follow rest of steps`
 
 
 ## Run integration on other HA installation in the network
@@ -195,7 +197,7 @@ You need to adapt (via terminal) some settings.<br>
 [PLCSERVER] is disabled — plcserver = 0. This is the service RevPiNetIO connects to.<br>
 [XMLRPC] is bound to localhost — bindip = 127.0.0.1, so it only accepts local connections.<br>
 
-To fix both:
+To change both:
 ```
 sudo nano /etc/revpipyload/revpipyload.conf
 ```
