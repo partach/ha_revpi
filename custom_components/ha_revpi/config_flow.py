@@ -699,6 +699,8 @@ class RevPiOptionsFlowHandler(OptionsFlow):
 
     async def _async_test_mqtt_connection(self, config: dict) -> None:
         """Test MQTT broker connection."""
+        import asyncio
+
         from .mqtt_client import MQTTClient
 
         client = MQTTClient(
@@ -709,6 +711,11 @@ class RevPiOptionsFlowHandler(OptionsFlow):
         )
         try:
             await client.async_connect(self.hass)
+            # Wait for connection callback (up to 10s)
+            for _ in range(100):
+                if client.is_connected:
+                    break
+                await asyncio.sleep(0.1)
             if not client.is_connected:
                 raise Exception("Could not connect to MQTT broker")
             _LOGGER.info(
