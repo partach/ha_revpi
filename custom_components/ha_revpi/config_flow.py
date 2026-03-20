@@ -16,6 +16,12 @@ from homeassistant.config_entries import (
 )
 from homeassistant.const import CONF_HOST
 from homeassistant.core import callback
+from homeassistant.helpers.selector import (
+    SelectOptionDict,
+    SelectSelector,
+    SelectSelectorConfig,
+    SelectSelectorMode,
+)
 
 from .const import (
     CONF_BUILDING_DEVICES,
@@ -767,7 +773,7 @@ class RevPiOptionsFlowHandler(OptionsFlow):
             ): str,
             vol.Optional(
                 CONF_MQTT_PORT, default=cur_port
-            ): vol.All(vol.Coerce(int), vol.Range(min=1, max=65535)),
+            ): int,
             vol.Optional(
                 CONF_MQTT_USERNAME, default=cur_username
             ): str,
@@ -779,7 +785,7 @@ class RevPiOptionsFlowHandler(OptionsFlow):
             ): str,
             vol.Optional(
                 CONF_MQTT_PUBLISH_INTERVAL, default=cur_interval
-            ): vol.All(vol.Coerce(int), vol.Range(min=1, max=60)),
+            ): int,
             vol.Optional(
                 CONF_MQTT_PUBLISH_CORE, default=cur_publish_core
             ): bool,
@@ -791,9 +797,15 @@ class RevPiOptionsFlowHandler(OptionsFlow):
                     CONF_MQTT_PUBLISH_DEVICES,
                     default=cur_publish_devices,
                 )
-            ] = vol.All(
-                vol.Coerce(list),
-                [vol.In(device_names)],
+            ] = SelectSelector(
+                SelectSelectorConfig(
+                    options=[
+                        SelectOptionDict(value=name, label=name)
+                        for name in device_names
+                    ],
+                    multiple=True,
+                    mode=SelectSelectorMode.LIST,
+                )
             )
 
         return self.async_show_form(
