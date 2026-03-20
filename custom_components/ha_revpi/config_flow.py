@@ -16,6 +16,7 @@ from homeassistant.config_entries import (
 )
 from homeassistant.const import CONF_HOST
 from homeassistant.core import callback
+from homeassistant.helpers import selector
 
 from .const import (
     CONF_BUILDING_DEVICES,
@@ -696,10 +697,43 @@ class RevPiOptionsFlowHandler(OptionsFlow):
             ),
         )
 
+    async def _async_test_mqtt_connection(self, config: dict) -> None:
+        """Test MQTT broker connection."""
+        from .mqtt_client import MQTTClient
+
+        client = MQTTClient(
+            broker=config[CONF_MQTT_BROKER],
+            port=config[CONF_MQTT_PORT],
+            username=config.get(CONF_MQTT_USERNAME) or "",
+            password=config.get(CONF_MQTT_PASSWORD) or "",
+        )
+        try:
+            await client.async_connect(self.hass)
+            if not client.is_connected:
+                raise Exception("Could not connect to MQTT broker")
+            _LOGGER.info(
+                "MQTT connection test successful to %s:%s",
+                config[CONF_MQTT_BROKER],
+                config[CONF_MQTT_PORT],
+            )
+        except Exception as err:
+            _LOGGER.error("MQTT connection test failed: %s", err)
+            raise Exception(
+                f"Cannot connect to MQTT broker at "
+                f"{config[CONF_MQTT_BROKER]}:{config[CONF_MQTT_PORT]}. "
+                "Check broker address, port, and credentials."
+            ) from err
+        finally:
+            try:
+                await client.async_disconnect(self.hass)
+            except Exception:
+                _LOGGER.debug("Error disconnecting MQTT test client")
+
     async def async_step_mqtt(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
         """Configure MQTT publishing settings."""
+        errors: dict[str, str] = {}
         mqtt_conf = dict(
             self.config_entry.options.get(CONF_MQTT, {})
         )
@@ -733,16 +767,24 @@ class RevPiOptionsFlowHandler(OptionsFlow):
                 CONF_MQTT_PUBLISH_DEVICES, []
             )
 
-            new_options = dict(self.config_entry.options)
-            new_options[CONF_MQTT] = mqtt_conf
-            return self.async_create_entry(title="", data=new_options)
+            # Test connection if enabled
+            if mqtt_conf[CONF_MQTT_ENABLED] and mqtt_conf[CONF_MQTT_BROKER]:
+                try:
+                    await self._async_test_mqtt_connection(mqtt_conf)
+                except Exception:
+                    errors["base"] = "cannot_connect"
+
+            if not errors:
+                new_options = dict(self.config_entry.options)
+                new_options[CONF_MQTT] = mqtt_conf
+                return self.async_create_entry(title="", data=new_options)
 
         # Build device name choices from configured building devices
         devices = self.config_entry.options.get(CONF_BUILDING_DEVICES, [])
-        device_names = {
-            dev.get("name", f"Device {i}"): dev.get("name", f"Device {i}")
+        device_names = [
+            dev.get("name", f"Device {i}")
             for i, dev in enumerate(devices)
-        }
+        ]
 
         cur_enabled = mqtt_conf.get(CONF_MQTT_ENABLED, False)
         cur_broker = mqtt_conf.get(CONF_MQTT_BROKER, "")
@@ -773,7 +815,11 @@ class RevPiOptionsFlowHandler(OptionsFlow):
             ): str,
             vol.Optional(
                 CONF_MQTT_PASSWORD, default=cur_password
-            ): str,
+            ): selector.TextSelector(
+                selector.TextSelectorConfig(
+                    type=selector.TextSelectorType.PASSWORD
+                )
+            ),
             vol.Optional(
                 CONF_MQTT_MAIN_TOPIC, default=cur_main_topic
             ): str,
@@ -786,17 +832,25 @@ class RevPiOptionsFlowHandler(OptionsFlow):
         }
 
         if device_names:
+            device_options = [
+                selector.SelectOptionDict(value=name, label=name)
+                for name in device_names
+            ]
             schema_dict[
                 vol.Optional(
                     CONF_MQTT_PUBLISH_DEVICES,
                     default=cur_publish_devices,
                 )
-            ] = vol.All(
-                vol.Coerce(list),
-                [vol.In(device_names)],
+            ] = selector.SelectSelector(
+                selector.SelectSelectorConfig(
+                    options=device_options,
+                    multiple=True,
+                    mode=selector.SelectSelectorMode.DROPDOWN,
+                )
             )
 
         return self.async_show_form(
             step_id="mqtt",
             data_schema=vol.Schema(schema_dict),
+            errors=errors,
         )

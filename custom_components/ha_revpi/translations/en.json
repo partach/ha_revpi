@@ -73,7 +73,8 @@
     },
     "error": {
       "template_load_failed": "Failed to load the selected template.",
-      "io_not_found": "Some IO names were not found in the RevPi process image. Check the names match your piCtory configuration."
+      "io_not_found": "Some IO names were not found in the RevPi process image. Check the names match your piCtory configuration.",
+      "cannot_connect": "Cannot connect to MQTT broker. Check broker address, port, and credentials."
     },
     "abort": {
       "no_templates": "No device templates found. Place JSON templates in the ha_revpi/templates directory.",
