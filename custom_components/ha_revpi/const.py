@@ -77,3 +77,18 @@ BUILDING_PLATFORMS: Final = ["climate", "fan", "cover"]
 
 # PID controller defaults
 DEFAULT_PID_SAMPLE_INTERVAL: Final = 1.0  # seconds
+
+# MQTT publishing
+CONF_MQTT: Final = "mqtt"
+CONF_MQTT_ENABLED: Final = "enabled"
+CONF_MQTT_BROKER: Final = "broker"
+CONF_MQTT_PORT: Final = "mqtt_port"
+CONF_MQTT_USERNAME: Final = "username"
+CONF_MQTT_PASSWORD: Final = "password"
+CONF_MQTT_MAIN_TOPIC: Final = "main_topic"
+CONF_MQTT_PUBLISH_INTERVAL: Final = "publish_interval"
+CONF_MQTT_PUBLISH_CORE: Final = "publish_core"
+CONF_MQTT_PUBLISH_DEVICES: Final = "publish_devices"
+DEFAULT_MQTT_PORT: Final = 1883
+DEFAULT_MQTT_PUBLISH_INTERVAL: Final = 5
+DEFAULT_MQTT_MAIN_TOPIC: Final = "revpi"

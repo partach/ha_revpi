@@ -12,13 +12,21 @@ from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.entity import DeviceInfo
 
 from .const import (
+    BUILDING_DEVICE_SUFFIX,
     CONF_BUILDING_DEVICES,
     CONF_CONFIGRSC,
     CONF_HOST,
+    CONF_MQTT,
+    CONF_MQTT_BROKER,
+    CONF_MQTT_ENABLED,
+    CONF_MQTT_PASSWORD,
+    CONF_MQTT_PORT,
+    CONF_MQTT_USERNAME,
     CONF_POLL_INTERVAL,
     CORE_DEVICE_SUFFIX,
     DEFAULT_CONFIGRSC,
     DEFAULT_HOST,
+    DEFAULT_MQTT_PORT,
     DEFAULT_POLL_INTERVAL,
     DOMAIN,
 )
@@ -98,6 +106,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # Start PID controllers for building devices
     await _start_pid_controllers(hass, entry)
 
+    # Start MQTT publisher if configured
+    await _start_mqtt_publisher(hass, entry)
+
     # Listen for option changes
     entry.async_on_unload(entry.add_update_listener(update_listener))
 
@@ -108,8 +119,13 @@ async def async_unload_entry(
     hass: HomeAssistant, entry: ConfigEntry
 ) -> bool:
     """Unload a Revolution Pi config entry."""
-    # Stop PID controllers
+    # Stop MQTT publisher
     hub_data = hass.data[DOMAIN].get(entry.entry_id, {})
+    mqtt_publisher = hub_data.get("mqtt_publisher")
+    if mqtt_publisher is not None:
+        await mqtt_publisher.async_stop()
+
+    # Stop PID controllers
     pid_tasks = hub_data.get("pid_tasks", [])
     for task in pid_tasks:
         task.cancel()
@@ -182,6 +198,26 @@ def _setup_building_devices(
 
     hass.data[DOMAIN][entry.entry_id]["building_handlers"] = handlers
 
+    # Clean up stale building device entries from the device registry.
+    # After a device is removed from config and the entry reloads, the old
+    # device registry entry persists as an orphan.  Remove any building
+    # device whose identifier is no longer backed by a handler.
+    active_ids = {(DOMAIN, h.device_id) for h in handlers}
+    for device_entry in dr.async_entries_for_config_entry(
+        device_registry, entry.entry_id
+    ):
+        for ident in device_entry.identifiers:
+            # Only touch building-device entries (contain the suffix)
+            if ident[0] == DOMAIN and BUILDING_DEVICE_SUFFIX in ident[1]:
+                if ident not in active_ids:
+                    _LOGGER.info(
+                        "Removing stale building device: %s (%s)",
+                        device_entry.name,
+                        ident,
+                    )
+                    device_registry.async_remove_device(device_entry.id)
+                break
+
 
 async def _start_pid_controllers(
     hass: HomeAssistant, entry: ConfigEntry
@@ -209,6 +245,47 @@ async def _start_pid_controllers(
                 )
 
     hub_data["pid_tasks"] = pid_tasks
+
+
+async def _start_mqtt_publisher(
+    hass: HomeAssistant, entry: ConfigEntry
+) -> None:
+    """Start the MQTT publisher if configured and enabled."""
+    mqtt_conf = entry.options.get(CONF_MQTT, {})
+    if not mqtt_conf.get(CONF_MQTT_ENABLED):
+        return
+
+    broker = mqtt_conf.get(CONF_MQTT_BROKER, "")
+    if not broker:
+        _LOGGER.warning("MQTT enabled but no broker configured")
+        return
+
+    from .mqtt_client import MQTTClient
+    from .mqtt_publisher import MQTTPublisher
+
+    hub_data = hass.data[DOMAIN][entry.entry_id]
+    coordinator = hub_data["coordinator"]
+    handlers = hub_data.get("building_handlers", [])
+
+    client = MQTTClient(
+        broker=broker,
+        port=mqtt_conf.get(CONF_MQTT_PORT, DEFAULT_MQTT_PORT),
+        username=mqtt_conf.get(CONF_MQTT_USERNAME, ""),
+        password=mqtt_conf.get(CONF_MQTT_PASSWORD, ""),
+        client_id=f"ha_revpi_{entry.entry_id[:8]}",
+    )
+
+    publisher = MQTTPublisher(
+        hass=hass,
+        client=client,
+        mqtt_config=mqtt_conf,
+        coordinator=coordinator,
+        handlers=handlers,
+    )
+
+    await publisher.async_start()
+    hub_data["mqtt_publisher"] = publisher
+    _LOGGER.info("MQTT publisher started for %s", entry.title)
 
 
 async def _async_create_revpi(

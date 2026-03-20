@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import copy
 import logging
 from typing import Any
 from urllib.parse import urlparse
@@ -20,11 +21,24 @@ from .const import (
     CONF_BUILDING_DEVICES,
     CONF_CONFIGRSC,
     CONF_CONNECTION_TYPE,
+    CONF_MQTT,
+    CONF_MQTT_BROKER,
+    CONF_MQTT_ENABLED,
+    CONF_MQTT_MAIN_TOPIC,
+    CONF_MQTT_PASSWORD,
+    CONF_MQTT_PORT,
+    CONF_MQTT_PUBLISH_CORE,
+    CONF_MQTT_PUBLISH_DEVICES,
+    CONF_MQTT_PUBLISH_INTERVAL,
+    CONF_MQTT_USERNAME,
     CONF_POLL_INTERVAL,
     CONNECTION_TYPE_LOCAL,
     CONNECTION_TYPE_TCP,
     DEFAULT_CONFIGRSC,
     DEFAULT_HOST,
+    DEFAULT_MQTT_MAIN_TOPIC,
+    DEFAULT_MQTT_PORT,
+    DEFAULT_MQTT_PUBLISH_INTERVAL,
     DEFAULT_POLL_INTERVAL,
     DOMAIN,
     IO_TYPE_INP,
@@ -187,6 +201,7 @@ class RevPiConfigFlow(ConfigFlow, domain=DOMAIN):
 MENU_ADD_DEVICE = "add_building_device"
 MENU_EDIT_DEVICE = "edit_building_device"
 MENU_REMOVE_DEVICE = "remove_building_device"
+MENU_MQTT = "configure_mqtt"
 
 
 class RevPiOptionsFlowHandler(OptionsFlow):
@@ -209,6 +224,8 @@ class RevPiOptionsFlowHandler(OptionsFlow):
                 return await self.async_step_edit_building_device()
             if action == MENU_REMOVE_DEVICE:
                 return await self.async_step_remove_building_device()
+            if action == MENU_MQTT:
+                return await self.async_step_mqtt()
 
             # Save general settings (preserve building_devices)
             new_options = dict(self.config_entry.options)
@@ -234,12 +251,16 @@ class RevPiOptionsFlowHandler(OptionsFlow):
         devices = self.config_entry.options.get(CONF_BUILDING_DEVICES, [])
         device_count = len(devices)
 
+        mqtt_conf = self.config_entry.options.get(CONF_MQTT, {})
+        mqtt_status = "enabled" if mqtt_conf.get(CONF_MQTT_ENABLED) else "disabled"
+
         actions = {
             MENU_ADD_DEVICE: f"Add building device ({device_count} configured)",
         }
         if device_count > 0:
             actions[MENU_EDIT_DEVICE] = "Edit building device IO mapping"
             actions[MENU_REMOVE_DEVICE] = "Remove building device"
+        actions[MENU_MQTT] = f"Configure MQTT publishing ({mqtt_status})"
 
         return self.async_show_form(
             step_id="init",
@@ -515,7 +536,10 @@ class RevPiOptionsFlowHandler(OptionsFlow):
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
         """Edit IO mappings for an existing building device."""
-        devices = list(
+        # Deep-copy so in-place mutations don't alter entry.options before
+        # the new options are saved — otherwise HA may see old == new and
+        # skip firing the update listener.
+        devices = copy.deepcopy(
             self.config_entry.options.get(CONF_BUILDING_DEVICES, [])
         )
         index = self._edit_device_index
@@ -670,4 +694,109 @@ class RevPiOptionsFlowHandler(OptionsFlow):
             data_schema=vol.Schema(
                 {vol.Required("device_index"): vol.In(choices)}
             ),
+        )
+
+    async def async_step_mqtt(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Configure MQTT publishing settings."""
+        mqtt_conf = dict(
+            self.config_entry.options.get(CONF_MQTT, {})
+        )
+
+        if user_input is not None:
+            mqtt_conf[CONF_MQTT_ENABLED] = user_input.get(
+                CONF_MQTT_ENABLED, False
+            )
+            mqtt_conf[CONF_MQTT_BROKER] = user_input.get(
+                CONF_MQTT_BROKER, ""
+            )
+            mqtt_conf[CONF_MQTT_PORT] = user_input.get(
+                CONF_MQTT_PORT, DEFAULT_MQTT_PORT
+            )
+            mqtt_conf[CONF_MQTT_USERNAME] = user_input.get(
+                CONF_MQTT_USERNAME, ""
+            )
+            mqtt_conf[CONF_MQTT_PASSWORD] = user_input.get(
+                CONF_MQTT_PASSWORD, ""
+            )
+            mqtt_conf[CONF_MQTT_MAIN_TOPIC] = user_input.get(
+                CONF_MQTT_MAIN_TOPIC, DEFAULT_MQTT_MAIN_TOPIC
+            )
+            mqtt_conf[CONF_MQTT_PUBLISH_INTERVAL] = user_input.get(
+                CONF_MQTT_PUBLISH_INTERVAL, DEFAULT_MQTT_PUBLISH_INTERVAL
+            )
+            mqtt_conf[CONF_MQTT_PUBLISH_CORE] = user_input.get(
+                CONF_MQTT_PUBLISH_CORE, False
+            )
+            mqtt_conf[CONF_MQTT_PUBLISH_DEVICES] = user_input.get(
+                CONF_MQTT_PUBLISH_DEVICES, []
+            )
+
+            new_options = dict(self.config_entry.options)
+            new_options[CONF_MQTT] = mqtt_conf
+            return self.async_create_entry(title="", data=new_options)
+
+        # Build device name choices from configured building devices
+        devices = self.config_entry.options.get(CONF_BUILDING_DEVICES, [])
+        device_names = {
+            dev.get("name", f"Device {i}"): dev.get("name", f"Device {i}")
+            for i, dev in enumerate(devices)
+        }
+
+        cur_enabled = mqtt_conf.get(CONF_MQTT_ENABLED, False)
+        cur_broker = mqtt_conf.get(CONF_MQTT_BROKER, "")
+        cur_port = mqtt_conf.get(CONF_MQTT_PORT, DEFAULT_MQTT_PORT)
+        cur_username = mqtt_conf.get(CONF_MQTT_USERNAME, "")
+        cur_password = mqtt_conf.get(CONF_MQTT_PASSWORD, "")
+        cur_main_topic = mqtt_conf.get(
+            CONF_MQTT_MAIN_TOPIC, DEFAULT_MQTT_MAIN_TOPIC
+        )
+        cur_interval = mqtt_conf.get(
+            CONF_MQTT_PUBLISH_INTERVAL, DEFAULT_MQTT_PUBLISH_INTERVAL
+        )
+        cur_publish_core = mqtt_conf.get(CONF_MQTT_PUBLISH_CORE, False)
+        cur_publish_devices = mqtt_conf.get(CONF_MQTT_PUBLISH_DEVICES, [])
+
+        schema_dict: dict[Any, Any] = {
+            vol.Optional(
+                CONF_MQTT_ENABLED, default=cur_enabled
+            ): bool,
+            vol.Optional(
+                CONF_MQTT_BROKER, default=cur_broker
+            ): str,
+            vol.Optional(
+                CONF_MQTT_PORT, default=cur_port
+            ): vol.All(vol.Coerce(int), vol.Range(min=1, max=65535)),
+            vol.Optional(
+                CONF_MQTT_USERNAME, default=cur_username
+            ): str,
+            vol.Optional(
+                CONF_MQTT_PASSWORD, default=cur_password
+            ): str,
+            vol.Optional(
+                CONF_MQTT_MAIN_TOPIC, default=cur_main_topic
+            ): str,
+            vol.Optional(
+                CONF_MQTT_PUBLISH_INTERVAL, default=cur_interval
+            ): vol.All(vol.Coerce(int), vol.Range(min=1, max=60)),
+            vol.Optional(
+                CONF_MQTT_PUBLISH_CORE, default=cur_publish_core
+            ): bool,
+        }
+
+        if device_names:
+            schema_dict[
+                vol.Optional(
+                    CONF_MQTT_PUBLISH_DEVICES,
+                    default=cur_publish_devices,
+                )
+            ] = vol.All(
+                vol.Ensure(list),  # Handle single selection
+                [vol.In(device_names)],
+            )
+
+        return self.async_show_form(
+            step_id="mqtt",
+            data_schema=vol.Schema(schema_dict),
         )
