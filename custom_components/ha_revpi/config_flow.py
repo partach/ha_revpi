@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import copy
 import logging
 from typing import Any
 from urllib.parse import urlparse
@@ -535,7 +536,10 @@ class RevPiOptionsFlowHandler(OptionsFlow):
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
         """Edit IO mappings for an existing building device."""
-        devices = list(
+        # Deep-copy so in-place mutations don't alter entry.options before
+        # the new options are saved — otherwise HA may see old == new and
+        # skip firing the update listener.
+        devices = copy.deepcopy(
             self.config_entry.options.get(CONF_BUILDING_DEVICES, [])
         )
         index = self._edit_device_index

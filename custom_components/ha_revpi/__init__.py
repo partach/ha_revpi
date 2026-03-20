@@ -12,6 +12,7 @@ from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.entity import DeviceInfo
 
 from .const import (
+    BUILDING_DEVICE_SUFFIX,
     CONF_BUILDING_DEVICES,
     CONF_CONFIGRSC,
     CONF_HOST,
@@ -196,6 +197,26 @@ def _setup_building_devices(
         )
 
     hass.data[DOMAIN][entry.entry_id]["building_handlers"] = handlers
+
+    # Clean up stale building device entries from the device registry.
+    # After a device is removed from config and the entry reloads, the old
+    # device registry entry persists as an orphan.  Remove any building
+    # device whose identifier is no longer backed by a handler.
+    active_ids = {(DOMAIN, h.device_id) for h in handlers}
+    for device_entry in dr.async_entries_for_config_entry(
+        device_registry, entry.entry_id
+    ):
+        for ident in device_entry.identifiers:
+            # Only touch building-device entries (contain the suffix)
+            if ident[0] == DOMAIN and BUILDING_DEVICE_SUFFIX in ident[1]:
+                if ident not in active_ids:
+                    _LOGGER.info(
+                        "Removing stale building device: %s (%s)",
+                        device_entry.name,
+                        ident,
+                    )
+                    device_registry.async_remove_device(device_entry.id)
+                break
 
 
 async def _start_pid_controllers(
