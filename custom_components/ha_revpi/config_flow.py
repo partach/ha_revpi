@@ -792,7 +792,7 @@ class RevPiOptionsFlowHandler(OptionsFlow):
                     default=cur_publish_devices,
                 )
             ] = vol.All(
-                vol.Ensure(list),  # Handle single selection
+                vol.Coerce(list),
                 [vol.In(device_names)],
             )
 
