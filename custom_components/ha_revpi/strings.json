@@ -69,6 +69,21 @@
         "data": {
           "device_index": "Device to remove"
         }
+      },
+      "mqtt": {
+        "title": "MQTT Publishing",
+        "description": "Configure MQTT publishing of device values to an external broker.",
+        "data": {
+          "enabled": "Enable MQTT publishing",
+          "broker": "Broker address",
+          "mqtt_port": "Broker port",
+          "username": "Username",
+          "password": "Password",
+          "main_topic": "Topic prefix",
+          "publish_interval": "Minimum publish interval (seconds)",
+          "publish_core": "Publish core diagnostics",
+          "publish_devices": "Devices to publish"
+        }
       }
     },
     "error": {

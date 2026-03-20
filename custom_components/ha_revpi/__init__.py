@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import os
 import shutil
@@ -125,10 +126,16 @@ async def async_unload_entry(
     if mqtt_publisher is not None:
         await mqtt_publisher.async_stop()
 
-    # Stop PID controllers
+    # Stop PID controllers — cancel and await so they fully stop before
+    # setup creates new ones (otherwise two loops write to the same output).
     pid_tasks = hub_data.get("pid_tasks", [])
     for task in pid_tasks:
         task.cancel()
+    for task in pid_tasks:
+        try:
+            await task
+        except asyncio.CancelledError:
+            pass
 
     unload_ok = await hass.config_entries.async_unload_platforms(
         entry, PLATFORMS
