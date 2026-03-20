@@ -248,7 +248,7 @@ def start_pid_task(
         )
         return None
 
-    task = hass.async_create_task(
+    task = hass.async_create_background_task(
         _pid_loop(
             hass, handler, controller, sample_interval,
             input_role, output_role,
