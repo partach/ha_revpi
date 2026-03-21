@@ -31,9 +31,9 @@ It is beyond the goal of this tutorial to explain those. For RevPI basics look a
 - [Use PiCtory](#use-pictory-for-enabling-your-setup-for-use-with-ha)
 - [Installing HA on RevPI](#installation-of-home-assistant-on-revpi-cpu)
 - [Install HACS on RevPI](#installation-of-hacs-for-home-assistant-on-revpi-cpu)
-- [Building Devices & Templates](#building-devices--templates)
-- [MQTT Publishing](#mqtt-publishing)
 - [Integration on Remote HA client](#run-integration-on-other-ha-installation-in-the-network)
+- [Equipment Templates](#equipment-templates)
+- [MQTT publishing](#mqtt-publishing)
 
 
 ## Features
@@ -86,63 +86,6 @@ You can choose all found devices and the card will show that information. The ca
 </p>
 
 The card is interactive so you can also change values here (depending on how you setup the module in PiCtory)<br>
-
-## Building Devices & Templates
-Beyond individual IOs, ha_revpi lets you group RevPi inputs and outputs into logical **building devices** such as air handling units (AHUs), fans, valves, and dampers. Each building device maps raw RevPi IO points to meaningful roles and can apply transforms (e.g. converting a 0-10V raw value to 0-100%).
-
-### Templates
-Building devices are created from JSON templates. Several built-in templates are included:
-- **ahu_basic** -- Air handling unit with supply fan, heating valve, damper, and filter alarm
-- **fan_basic** -- Simple fan with start/stop command and running feedback
-- **valve_basic** -- Modulating valve with position command and feedback
-- **damper_basic** -- Damper with position control
-
-Templates define the IO roles, data types, transforms, and optionally a PID control section. You can also create your own templates by placing JSON files in the `custom_components/ha_revpi/templates/` directory.
-
-### Adding a Building Device
-1. Go to **Settings > Devices & Services > ha_revpi > Configure**
-2. Select **Add building device**
-3. Choose a template from the list
-4. Remap the IO names to match your PiCtory configuration (the template provides defaults, but your actual IO names will differ)
-5. Submit -- the device and its entities are created immediately, no restart needed
-
-Each building device appears as its own device in Home Assistant with entities for each mapped IO (sensors, switches, numbers, climate, fan, or cover depending on the device type).
-
-### PID Control
-Templates can include a PID control section. When enabled, a built-in PID controller loop runs in the background, reading a measured value (e.g. supply temperature) and writing to an output (e.g. heating valve). PID parameters (Kp, Ti, Td, setpoint) are exposed as number entities so you can tune them live from the dashboard.
-
-## MQTT Publishing
-ha_revpi includes an optional MQTT publisher that sends IO values to an MQTT broker. This is useful for integrating with external systems, logging, or bridging to other automation platforms. It uses its own standalone MQTT client (paho-mqtt), independent of the HA MQTT integration.
-
-### Configuration
-1. Go to **Settings > Devices & Services > ha_revpi > Configure**
-2. Select **Configure MQTT publishing**
-3. Fill in the broker settings:
-   - **Enabled** -- toggle MQTT on/off
-   - **Broker** -- hostname or IP of your MQTT broker
-   - **Port** -- default 1883
-   - **Username / Password** -- optional, for authenticated brokers
-   - **Main topic** -- prefix for all published topics (default: `revpi`)
-   - **Publish interval** -- minimum seconds between publishes of the same topic (1-60, default: 5)
-   - **Publish core** -- enable publishing of CPU diagnostics (temperature, frequency, IO cycle time)
-   - **Publish devices** -- select which building devices to publish
-
-The connection is tested when you submit. If the broker is unreachable you will see an error before the configuration is saved.
-
-### Topic Structure
-Values are published as simple scalar payloads (numbers or `true`/`false`):
-```
-{main_topic}/revpi/core/cpu_temperature          → 52.3
-{main_topic}/revpi/core/cpu_frequency             → 1500
-{main_topic}/revpi/core/io_cycle                  → 8
-
-{main_topic}/revpi/devices/{device_name}/temperature     → 21.5
-{main_topic}/revpi/devices/{device_name}/heating_valve    → 45
-{main_topic}/revpi/devices/{device_name}/fan_status       → true
-{main_topic}/revpi/devices/{device_name}/alarms/filter_alarm → false
-```
-
-Only changed values are published, and each topic is rate-limited to the configured publish interval.
 
 ## Setting up RevPI CPU
 1. Unbox your goodies. Pay special attention to right side of CPU. It states the **URL and password** to connect to your CPU!<br>
@@ -279,6 +222,64 @@ sudo systemctl restart revpipyload
 ```
 
 But... did not get it working yet. Not sure if revpimodio2 2.8.1 (running on HA) is fully compatible with latest RevPI revpipyload?
+
+## Equipment Templates
+Beyond individual IOs, ha_revpi lets you group RevPi inputs and outputs into logical equipment (**building devices**) such as air handling units (AHUs), fans, valves, and dampers. Each building device maps raw RevPi IO points to meaningful roles and can apply transforms (e.g. converting a 0-10V raw value to 0-100%).
+
+### Templates
+Building devices are created from JSON templates. Several built-in templates are included:
+- **ahu_basic** -- Air handling unit with supply fan, heating valve, damper, and filter alarm
+- **fan_basic** -- Simple fan with start/stop command and running feedback
+- **valve_basic** -- Modulating valve with position command and feedback
+- **damper_basic** -- Damper with position control
+
+Templates define the IO roles, data types, transforms, and optionally a PID control section. You can also create your own templates by placing JSON files in the `custom_components/ha_revpi/templates/` directory.
+
+### Adding a Building Device
+1. Go to **Settings > Devices & Services > ha_revpi > Configure**
+2. Select **Add building device**
+3. Choose a template from the list
+4. Remap the IO names to match your PiCtory configuration (the template provides defaults, but your actual IO names will differ)
+5. Submit -- the device and its entities are created immediately, no restart needed
+
+Each building device appears as its own device in Home Assistant with entities for each mapped IO (sensors, switches, numbers, climate, fan, or cover depending on the device type).
+
+### PID Control
+Templates can include a PID control section. When enabled, a built-in PID controller loop runs in the background, reading a measured value (e.g. supply temperature) and writing to an output (e.g. heating valve). PID parameters (Kp, Ti, Td, setpoint) are exposed as number entities so you can tune them live from the dashboard.
+
+## MQTT Publishing
+ha_revpi includes an optional MQTT publisher that sends IO values to an MQTT broker. This is useful for integrating with external systems, logging, or bridging to other automation platforms. It uses its own standalone MQTT client (paho-mqtt), independent of the HA MQTT integration.
+
+### Configuration
+1. Go to **Settings > Devices & Services > ha_revpi > Configure**
+2. Select **Configure MQTT publishing**
+3. Fill in the broker settings:
+   - **Enabled** -- toggle MQTT on/off
+   - **Broker** -- hostname or IP of your MQTT broker
+   - **Port** -- default 1883
+   - **Username / Password** -- optional, for authenticated brokers
+   - **Main topic** -- prefix for all published topics (default: `revpi`)
+   - **Publish interval** -- minimum seconds between publishes of the same topic (1-60, default: 5)
+   - **Publish core** -- enable publishing of CPU diagnostics (temperature, frequency, IO cycle time)
+   - **Publish devices** -- select which building devices to publish
+
+The connection is tested when you submit. If the broker is unreachable you will see an error before the configuration is saved.
+
+### Topic Structure
+Values are published as simple scalar payloads (numbers or `true`/`false`):
+```
+{main_topic}/revpi/core/cpu_temperature          → 52.3
+{main_topic}/revpi/core/cpu_frequency             → 1500
+{main_topic}/revpi/core/io_cycle                  → 8
+
+{main_topic}/revpi/devices/{device_name}/temperature     → 21.5
+{main_topic}/revpi/devices/{device_name}/heating_valve    → 45
+{main_topic}/revpi/devices/{device_name}/fan_status       → true
+{main_topic}/revpi/devices/{device_name}/alarms/filter_alarm → false
+```
+
+Only changed values are published, and each topic is rate-limited to the configured publish interval.
+
 
 ## Discussion 
 See [here](https://github.com/partach/ha_revpi/discussions)
