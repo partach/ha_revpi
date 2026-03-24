@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from homeassistant.components.sensor import (
     SensorDeviceClass,
@@ -79,6 +79,9 @@ async def async_setup_entry(
         for entity in handler.get_entities():
             if isinstance(entity, SensorEntity):
                 entities.append(entity)
+
+    # Add MQTT diagnostic sensors if publisher is configured
+    _add_mqtt_sensors(hub_data, coordinator, entry, entities)
 
     async_add_entities(entities)
 
@@ -377,3 +380,96 @@ class RevPiBuildingAnalogSensor(CoordinatorEntity[RevPiCoordinator], SensorEntit
         if val is None:
             return None
         return float(val)
+
+
+# ---------------------------------------------------------------------------
+# MQTT diagnostic sensors
+# ---------------------------------------------------------------------------
+
+
+def _add_mqtt_sensors(
+    hub_data: dict,
+    coordinator: RevPiCoordinator,
+    entry: ConfigEntry,
+    entities: list[SensorEntity],
+) -> None:
+    """Add MQTT diagnostic sensors if an MQTT publisher is configured."""
+    from .mqtt_publisher import MQTTPublisher
+
+    publisher: MQTTPublisher | None = hub_data.get("mqtt_publisher")
+    if publisher is None:
+        return
+
+    core_device_info = DeviceInfo(
+        identifiers={(DOMAIN, f"{entry.entry_id}{CORE_DEVICE_SUFFIX}")},
+    )
+    entities.extend(
+        [
+            RevPiMQTTMessageCountSensor(
+                coordinator, entry, publisher, core_device_info
+            ),
+            RevPiMQTTLastPublishSensor(
+                coordinator, entry, publisher, core_device_info
+            ),
+        ]
+    )
+
+
+class RevPiMQTTMessageCountSensor(
+    CoordinatorEntity[RevPiCoordinator], SensorEntity
+):
+    """Sensor showing total MQTT messages published."""
+
+    _attr_has_entity_name = True
+    _attr_state_class = SensorStateClass.TOTAL_INCREASING
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+    _attr_icon = "mdi:counter"
+
+    def __init__(
+        self,
+        coordinator: RevPiCoordinator,
+        entry: ConfigEntry,
+        publisher: Any,
+        device_info: DeviceInfo,
+    ) -> None:
+        """Initialize."""
+        super().__init__(coordinator)
+        self._publisher = publisher
+        self._attr_unique_id = f"{entry.entry_id}_mqtt_message_count"
+        self._attr_name = "MQTT Messages Published"
+        self._attr_device_info = device_info
+
+    @property
+    def native_value(self) -> int:
+        """Return the message count."""
+        return self._publisher.message_count
+
+
+class RevPiMQTTLastPublishSensor(
+    CoordinatorEntity[RevPiCoordinator], SensorEntity
+):
+    """Sensor showing timestamp of last MQTT publish."""
+
+    _attr_has_entity_name = True
+    _attr_device_class = SensorDeviceClass.TIMESTAMP
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+    _attr_icon = "mdi:clock-outline"
+
+    def __init__(
+        self,
+        coordinator: RevPiCoordinator,
+        entry: ConfigEntry,
+        publisher: Any,
+        device_info: DeviceInfo,
+    ) -> None:
+        """Initialize."""
+        super().__init__(coordinator)
+        self._publisher = publisher
+        self._attr_unique_id = f"{entry.entry_id}_mqtt_last_publish"
+        self._attr_name = "MQTT Last Publish"
+        self._attr_device_info = device_info
+
+    @property
+    def native_value(self) -> Any:
+        """Return the last publish timestamp."""
+        return self._publisher.last_publish_time
