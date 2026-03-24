@@ -399,39 +399,65 @@ class RevPiBuildingCard extends LitElement {
     const oMin = oMinEid ? this._st(oMinEid) : null;
     const oMax = oMaxEid ? this._st(oMaxEid) : null;
 
-    // Try to find the process value:
-    // 1. Check for a standalone temperature sensor on this device
-    // 2. Fall back to the climate entity's current_temperature attribute
-    let pvEid = this._deviceEntities.find((e) => {
-      if (!e.startsWith("sensor.")) return false;
-      const st = this._st(e);
-      return st?.attributes?.device_class === "temperature" ||
-             e.includes("current_temperature") || e.includes("supply_temp");
-    });
-    let pvSt = pvEid ? this._st(pvEid) : null;
-    let pvVal = pvSt?.state;
-    let pvUnit = pvSt?.attributes?.unit_of_measurement || "";
-    let pvName = pvEid ? this._shortName(pvEid) : "";
+    // Read PID input/output roles from the PID output sensor's attributes
+    const pidOutSt = outputEid ? this._st(outputEid) : null;
+    const outputRole = pidOutSt?.attributes?.output_role || "";
+    const inputRole = pidOutSt?.attributes?.input_role || "";
 
-    // Fall back to climate entity's current_temperature
-    if (!pvEid) {
+    // Find process value using input_role, then standalone sensor, then climate fallback
+    let pvVal = null;
+    let pvUnit = "";
+    let pvName = "";
+
+    // 1. Match by input_role from PID config
+    if (inputRole) {
+      const inputEid = this._deviceEntities.find((e) =>
+        e.startsWith("sensor.") && e.includes(inputRole)
+      );
+      if (inputEid) {
+        const st = this._st(inputEid);
+        if (st) { pvVal = st.state; pvUnit = st.attributes?.unit_of_measurement || ""; pvName = this._shortName(inputEid); }
+      }
+    }
+    // 2. Standalone temperature sensor
+    if (pvVal == null) {
+      const tempEid = this._deviceEntities.find((e) => {
+        if (!e.startsWith("sensor.")) return false;
+        const st = this._st(e);
+        return st?.attributes?.device_class === "temperature" ||
+               e.includes("current_temperature") || e.includes("supply_temp");
+      });
+      if (tempEid) {
+        const st = this._st(tempEid);
+        if (st) { pvVal = st.state; pvUnit = st.attributes?.unit_of_measurement || ""; pvName = this._shortName(tempEid); }
+      }
+    }
+    // 3. Climate entity's current_temperature attribute
+    if (pvVal == null) {
       const climateEid = this._deviceEntities.find((e) => e.startsWith("climate."));
       const climateSt = climateEid ? this._st(climateEid) : null;
       if (climateSt?.attributes?.current_temperature != null) {
         pvVal = String(climateSt.attributes.current_temperature);
         pvUnit = climateSt.attributes.temperature_unit || "°C";
         pvName = "Current Temp";
-        pvEid = climateEid; // for display purposes
       }
     }
 
-    // Try to find the output actuator (heating_valve, cooling_valve, damper)
-    // Check sensor, cover, and number domains
-    const actuatorEid = this._deviceEntities.find((e) =>
-      (e.startsWith("sensor.") || e.startsWith("cover.") || e.startsWith("number.")) &&
-      (e.includes("heating_valve") || e.includes("cooling_valve") || e.includes("damper")) &&
-      !e.includes("pid_") && !e.includes("alarm")
-    );
+    // Find actuator: prefer output_role match, fallback to any valve/damper
+    let actuatorEid = null;
+    if (outputRole) {
+      actuatorEid = this._deviceEntities.find((e) =>
+        (e.startsWith("sensor.") || e.startsWith("cover.") || e.startsWith("number.")) &&
+        e.includes(outputRole) && !e.includes("pid_")
+      );
+    }
+    if (!actuatorEid) {
+      actuatorEid = this._deviceEntities.find((e) =>
+        (e.startsWith("sensor.") || e.startsWith("cover.") || e.startsWith("number.")) &&
+        (e.includes("heating_valve") || e.includes("cooling_valve") || e.includes("damper")) &&
+        !e.includes("pid_") && !e.includes("alarm")
+      );
+    }
     const actuatorSt = actuatorEid ? this._st(actuatorEid) : null;
     const actuatorPos = actuatorSt
       ? (actuatorSt.attributes?.current_position ?? parseFloat(actuatorSt.state))
