@@ -329,6 +329,15 @@ class RevPiPIDOutputSensor(CoordinatorEntity, SensorEntity):
         return round(pid.output, 1)
 
     @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        """Expose PID input/output role names so the frontend card can resolve them."""
+        control = self._handler.config.get("control", {})
+        return {
+            "input_role": control.get("input_role", ""),
+            "output_role": control.get("output_role", ""),
+        }
+
+    @property
     def available(self) -> bool:
         """Return True if PID controller is running."""
         task = getattr(self._handler, "_pid_task", None)
