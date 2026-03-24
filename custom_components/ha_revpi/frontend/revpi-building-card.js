@@ -409,9 +409,12 @@ class RevPiBuildingCard extends LitElement {
     let pvUnit = "";
     let pvName = "";
 
-    // 1. Match by input_role from PID config
+    // 1. Match by input_role from PID config (via io_role attribute, then entity ID)
     if (inputRole) {
-      const inputEid = this._deviceEntities.find((e) =>
+      const inputEid = this._deviceEntities.find((e) => {
+        const st = this._st(e);
+        return st?.attributes?.io_role === inputRole;
+      }) || this._deviceEntities.find((e) =>
         e.startsWith("sensor.") && e.includes(inputRole)
       );
       if (inputEid) {
@@ -443,20 +446,29 @@ class RevPiBuildingCard extends LitElement {
       }
     }
 
-    // Find actuator: prefer output_role match, fallback to any valve/damper
+    // Find actuator by matching io_role attribute against PID output_role
     let actuatorEid = null;
     if (outputRole) {
-      actuatorEid = this._deviceEntities.find((e) =>
-        (e.startsWith("sensor.") || e.startsWith("cover.") || e.startsWith("number.")) &&
-        e.includes(outputRole) && !e.includes("pid_")
-      );
+      // Primary: match entity whose io_role attribute equals the PID output_role
+      actuatorEid = this._deviceEntities.find((e) => {
+        const st = this._st(e);
+        return st?.attributes?.io_role === outputRole;
+      });
+      // Secondary: match entity ID containing the output_role string
+      if (!actuatorEid) {
+        actuatorEid = this._deviceEntities.find((e) =>
+          (e.startsWith("sensor.") || e.startsWith("cover.") || e.startsWith("number.")) &&
+          e.includes(outputRole) && !e.includes("pid_")
+        );
+      }
     }
+    // Last resort: any valve/damper sensor
     if (!actuatorEid) {
-      actuatorEid = this._deviceEntities.find((e) =>
-        (e.startsWith("sensor.") || e.startsWith("cover.") || e.startsWith("number.")) &&
-        (e.includes("heating_valve") || e.includes("cooling_valve") || e.includes("damper")) &&
-        !e.includes("pid_") && !e.includes("alarm")
-      );
+      actuatorEid = this._deviceEntities.find((e) => {
+        const st = this._st(e);
+        const role = st?.attributes?.io_role || "";
+        return role.includes("valve") || role.includes("damper");
+      });
     }
     const actuatorSt = actuatorEid ? this._st(actuatorEid) : null;
     const actuatorPos = actuatorSt
