@@ -42,6 +42,7 @@ _LOGGER = logging.getLogger(__name__)
 
 PLATFORMS: list[Platform] = [
     Platform.SENSOR,
+    Platform.BINARY_SENSOR,
     Platform.SWITCH,
     Platform.NUMBER,
     Platform.SELECT,
@@ -473,20 +474,20 @@ async def _async_install_frontend_resource(
         try:
             if not os.path.exists(target_dir):
                 os.makedirs(target_dir, exist_ok=True)
-            js_file = "revpi-ports-card.js"
-            source_path = os.path.join(
-                os.path.dirname(__file__), "frontend", js_file
-            )
-            target_path = os.path.join(target_dir, js_file)
-            if os.path.exists(source_path):
-                shutil.copy2(source_path, target_path)
-                _LOGGER.info(
-                    "Updated frontend resource: %s", target_path
+            for js_file in ("revpi-ports-card.js", "revpi-building-card.js"):
+                source_path = os.path.join(
+                    os.path.dirname(__file__), "frontend", js_file
                 )
-            else:
-                _LOGGER.warning(
-                    "Frontend source file missing at %s", source_path
-                )
+                target_path = os.path.join(target_dir, js_file)
+                if os.path.exists(source_path):
+                    shutil.copy2(source_path, target_path)
+                    _LOGGER.info(
+                        "Updated frontend resource: %s", target_path
+                    )
+                else:
+                    _LOGGER.debug(
+                        "Frontend source file not found: %s", source_path
+                    )
         except Exception as err:
             _LOGGER.error(
                 "Failed to install frontend resource: %s", err
@@ -508,17 +509,16 @@ async def _async_register_card(hass: HomeAssistant) -> None:
     if not resources.loaded:
         await resources.async_load()
 
-    card_url = f"/hacsfiles/{DOMAIN}/revpi-ports-card.js"
-    already_registered = any(
-        item["url"] == card_url for item in resources.async_items()
-    )
-    if already_registered:
-        return
-
-    await resources.async_create_item(
-        {
-            "res_type": "module",
-            "url": card_url,
-        }
-    )
-    _LOGGER.debug("Card registered: %s", card_url)
+    for card_file in ("revpi-ports-card.js", "revpi-building-card.js"):
+        card_url = f"/hacsfiles/{DOMAIN}/{card_file}"
+        already_registered = any(
+            item["url"] == card_url for item in resources.async_items()
+        )
+        if not already_registered:
+            await resources.async_create_item(
+                {
+                    "res_type": "module",
+                    "url": card_url,
+                }
+            )
+            _LOGGER.debug("Card registered: %s", card_url)

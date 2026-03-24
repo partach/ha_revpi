@@ -82,7 +82,8 @@
           "main_topic": "Topic prefix",
           "publish_interval": "Minimum publish interval (seconds)",
           "publish_core": "Publish core diagnostics",
-          "publish_devices": "Devices to publish"
+          "publish_devices": "Devices to publish",
+          "allow_external_setpoints": "Allow external setpoints via MQTT"
         }
       }
     },

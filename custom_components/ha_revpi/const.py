@@ -89,6 +89,7 @@ CONF_MQTT_MAIN_TOPIC: Final = "main_topic"
 CONF_MQTT_PUBLISH_INTERVAL: Final = "publish_interval"
 CONF_MQTT_PUBLISH_CORE: Final = "publish_core"
 CONF_MQTT_PUBLISH_DEVICES: Final = "publish_devices"
+CONF_MQTT_ALLOW_EXTERNAL_SETPOINTS: Final = "allow_external_setpoints"
 DEFAULT_MQTT_PORT: Final = 1883
 DEFAULT_MQTT_PUBLISH_INTERVAL: Final = 5
 DEFAULT_MQTT_MAIN_TOPIC: Final = "revpi"
