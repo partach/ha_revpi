@@ -381,6 +381,11 @@ class RevPiBuildingAnalogSensor(CoordinatorEntity[RevPiCoordinator], SensorEntit
             return None
         return float(val)
 
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        """Expose the IO role so the frontend card can match actuators."""
+        return {"io_role": self._mapping.role}
+
 
 # ---------------------------------------------------------------------------
 # MQTT diagnostic sensors
