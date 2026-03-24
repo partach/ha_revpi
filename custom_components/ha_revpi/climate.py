@@ -109,28 +109,32 @@ class RevPiBuildingClimate(CoordinatorEntity, ClimateEntity):
 
     @property
     def hvac_action(self) -> HVACAction | None:
-        """Return current HVAC action based on fan and valve state."""
+        """Return current HVAC action based on valve state and mode."""
         if self._hvac_mode == HVACMode.OFF:
             return HVACAction.OFF
 
-        if self._fan_status_mapping:
-            fan_on = self._handler.read_io_engineering(self._fan_status_mapping)
-            if not fan_on:
-                return HVACAction.IDLE
+        # Determine action from valve positions first
+        cooling_active = False
+        heating_active = False
 
         if self._cooling_valve_mapping:
             valve_pct = self._handler.read_io_engineering(
                 self._cooling_valve_mapping
             )
             if valve_pct is not None and valve_pct > 5:
-                return HVACAction.COOLING
+                cooling_active = True
 
         if self._heating_valve_mapping:
             valve_pct = self._handler.read_io_engineering(
                 self._heating_valve_mapping
             )
             if valve_pct is not None and valve_pct > 5:
-                return HVACAction.HEATING
+                heating_active = True
+
+        if cooling_active:
+            return HVACAction.COOLING
+        if heating_active:
+            return HVACAction.HEATING
 
         return HVACAction.IDLE
 

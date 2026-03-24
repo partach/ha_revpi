@@ -399,20 +399,38 @@ class RevPiBuildingCard extends LitElement {
     const oMin = oMinEid ? this._st(oMinEid) : null;
     const oMax = oMaxEid ? this._st(oMaxEid) : null;
 
-    // Try to find the process value (current_temperature sensor on same device)
-    const pvEid = this._deviceEntities.find((e) => {
+    // Try to find the process value:
+    // 1. Check for a standalone temperature sensor on this device
+    // 2. Fall back to the climate entity's current_temperature attribute
+    let pvEid = this._deviceEntities.find((e) => {
       if (!e.startsWith("sensor.")) return false;
       const st = this._st(e);
       return st?.attributes?.device_class === "temperature" ||
              e.includes("current_temperature") || e.includes("supply_temp");
     });
-    const pvSt = pvEid ? this._st(pvEid) : null;
+    let pvSt = pvEid ? this._st(pvEid) : null;
+    let pvVal = pvSt?.state;
+    let pvUnit = pvSt?.attributes?.unit_of_measurement || "";
+    let pvName = pvEid ? this._shortName(pvEid) : "";
 
-    // Try to find the output actuator (heating_valve, cooling_valve cover/number)
+    // Fall back to climate entity's current_temperature
+    if (!pvEid) {
+      const climateEid = this._deviceEntities.find((e) => e.startsWith("climate."));
+      const climateSt = climateEid ? this._st(climateEid) : null;
+      if (climateSt?.attributes?.current_temperature != null) {
+        pvVal = String(climateSt.attributes.current_temperature);
+        pvUnit = climateSt.attributes.temperature_unit || "°C";
+        pvName = "Current Temp";
+        pvEid = climateEid; // for display purposes
+      }
+    }
+
+    // Try to find the output actuator (heating_valve, cooling_valve, damper)
+    // Check sensor, cover, and number domains
     const actuatorEid = this._deviceEntities.find((e) =>
-      (e.startsWith("cover.") || e.startsWith("number.")) &&
-      (e.includes("valve") || e.includes("damper")) &&
-      !e.includes("pid_")
+      (e.startsWith("sensor.") || e.startsWith("cover.") || e.startsWith("number.")) &&
+      (e.includes("heating_valve") || e.includes("cooling_valve") || e.includes("damper")) &&
+      !e.includes("pid_") && !e.includes("alarm")
     );
     const actuatorSt = actuatorEid ? this._st(actuatorEid) : null;
     const actuatorPos = actuatorSt
@@ -440,9 +458,9 @@ class RevPiBuildingCard extends LitElement {
             <div class="pid-block pv-block">
               <div class="pid-block-label">Process Value</div>
               <div class="pid-block-value">
-                ${pvSt ? html`${pvSt.state}${pvSt.attributes.unit_of_measurement || ""}` : "—"}
+                ${pvVal != null ? html`${pvVal}${pvUnit}` : "—"}
               </div>
-              ${pvEid ? html`<div class="pid-block-io">${this._shortName(pvEid)}</div>` : ""}
+              ${pvName ? html`<div class="pid-block-io">${pvName}</div>` : ""}
             </div>
 
             <div class="pid-arrow">→</div>
