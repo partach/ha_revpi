@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from collections.abc import Callable
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
@@ -34,6 +35,7 @@ class MQTTClient:
         self._client_id = client_id
         self._client: Any = None
         self._connected = False
+        self._message_callback: Callable[[str, str], None] | None = None
 
     def _on_connect(
         self,
@@ -67,10 +69,34 @@ class MQTTClient:
         self._connected = False
         _LOGGER.info("MQTT disconnected from %s:%s", self._broker, self._port)
 
+    def _on_message(
+        self,
+        client: Any,
+        userdata: Any,
+        msg: Any,
+    ) -> None:
+        """Handle incoming message (runs in paho thread)."""
+        if self._message_callback is not None:
+            try:
+                payload = msg.payload.decode("utf-8")
+                self._message_callback(msg.topic, payload)
+            except Exception:
+                _LOGGER.debug(
+                    "Error handling MQTT message on %s", msg.topic, exc_info=True
+                )
+
     @property
     def is_connected(self) -> bool:
         """Return True if currently connected."""
         return self._connected
+
+    def set_message_callback(
+        self, callback: Callable[[str, str], None]
+    ) -> None:
+        """Register callback for incoming messages."""
+        self._message_callback = callback
+        if self._client is not None:
+            self._client.on_message = self._on_message
 
     def _ensure_client(self) -> None:
         """Create the paho client if not yet created (runs in executor)."""
@@ -88,6 +114,8 @@ class MQTTClient:
             )
         self._client.on_connect = self._on_connect
         self._client.on_disconnect = self._on_disconnect
+        if self._message_callback is not None:
+            self._client.on_message = self._on_message
         self._client.reconnect_delay_set(min_delay=1, max_delay=60)
 
     def _connect(self) -> None:
@@ -117,3 +145,7 @@ class MQTTClient:
     ) -> None:
         """Publish a message (blocking, call from executor)."""
         self._client.publish(topic, payload, qos=qos, retain=retain)
+
+    def subscribe(self, topic: str, qos: int = 0) -> None:
+        """Subscribe to a topic (blocking, call from executor)."""
+        self._client.subscribe(topic, qos=qos)

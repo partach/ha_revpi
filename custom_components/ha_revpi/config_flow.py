@@ -23,6 +23,7 @@ from .const import (
     CONF_CONFIGRSC,
     CONF_CONNECTION_TYPE,
     CONF_MQTT,
+    CONF_MQTT_ALLOW_EXTERNAL_SETPOINTS,
     CONF_MQTT_BROKER,
     CONF_MQTT_ENABLED,
     CONF_MQTT_MAIN_TOPIC,
@@ -773,6 +774,9 @@ class RevPiOptionsFlowHandler(OptionsFlow):
             mqtt_conf[CONF_MQTT_PUBLISH_DEVICES] = user_input.get(
                 CONF_MQTT_PUBLISH_DEVICES, []
             )
+            mqtt_conf[CONF_MQTT_ALLOW_EXTERNAL_SETPOINTS] = user_input.get(
+                CONF_MQTT_ALLOW_EXTERNAL_SETPOINTS, False
+            )
 
             # Test connection if enabled
             if mqtt_conf[CONF_MQTT_ENABLED] and mqtt_conf[CONF_MQTT_BROKER]:
@@ -806,6 +810,9 @@ class RevPiOptionsFlowHandler(OptionsFlow):
         )
         cur_publish_core = mqtt_conf.get(CONF_MQTT_PUBLISH_CORE, False)
         cur_publish_devices = mqtt_conf.get(CONF_MQTT_PUBLISH_DEVICES, [])
+        cur_allow_setpoints = mqtt_conf.get(
+            CONF_MQTT_ALLOW_EXTERNAL_SETPOINTS, False
+        )
 
         schema_dict: dict[Any, Any] = {
             vol.Optional(
@@ -835,6 +842,10 @@ class RevPiOptionsFlowHandler(OptionsFlow):
             ): vol.All(vol.Coerce(int), vol.Range(min=1, max=60)),
             vol.Optional(
                 CONF_MQTT_PUBLISH_CORE, default=cur_publish_core
+            ): bool,
+            vol.Optional(
+                CONF_MQTT_ALLOW_EXTERNAL_SETPOINTS,
+                default=cur_allow_setpoints,
             ): bool,
         }
 
