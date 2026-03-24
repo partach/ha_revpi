@@ -12,6 +12,7 @@ from homeassistant.components.climate import (
     HVACMode,
 )
 from homeassistant.const import UnitOfTemperature
+from homeassistant.helpers.restore_state import RestoreEntity
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN
@@ -53,7 +54,7 @@ async def async_setup_entry(
         async_add_entities(entities)
 
 
-class RevPiBuildingClimate(CoordinatorEntity, ClimateEntity):
+class RevPiBuildingClimate(CoordinatorEntity, ClimateEntity, RestoreEntity):
     """Climate entity backed by a building device handler."""
 
     _attr_has_entity_name = True
@@ -88,6 +89,41 @@ class RevPiBuildingClimate(CoordinatorEntity, ClimateEntity):
         # Expose COOL mode only when a cooling valve is configured
         self._attr_hvac_modes = (
             _HEAT_COOL_MODES if self._cooling_valve_mapping else _HEAT_ONLY_MODES
+        )
+
+    async def async_added_to_hass(self) -> None:
+        """Restore last known state on startup."""
+        await super().async_added_to_hass()
+        last_state = await self.async_get_last_state()
+        if last_state is None:
+            return
+
+        # Restore HVAC mode
+        if last_state.state in (m.value for m in HVACMode):
+            self._hvac_mode = HVACMode(last_state.state)
+
+        # Restore target temperature
+        last_temp = last_state.attributes.get("temperature")
+        if last_temp is not None:
+            try:
+                self._target_temp = float(last_temp)
+            except (ValueError, TypeError):
+                pass
+
+        # Sync restored setpoint to PID controller if it exists
+        pid = getattr(self._handler, "pid_controller", None)
+        if pid is not None:
+            pid.setpoint = self._target_temp
+
+        # Re-apply IO state for the restored mode
+        if self._hvac_mode != HVACMode.OFF:
+            await self.async_set_hvac_mode(self._hvac_mode)
+
+        _LOGGER.debug(
+            "Restored climate %s: mode=%s target=%.1f",
+            self._attr_name,
+            self._hvac_mode,
+            self._target_temp,
         )
 
     @property
@@ -142,7 +178,8 @@ class RevPiBuildingClimate(CoordinatorEntity, ClimateEntity):
         """Set target temperature.
 
         If PID is active, update the PID setpoint so the controller
-        tracks the new target.
+        tracks the new target.  Also persist to config so it survives
+        restarts.
         """
         temp = kwargs.get("temperature")
         if temp is not None:
@@ -151,6 +188,14 @@ class RevPiBuildingClimate(CoordinatorEntity, ClimateEntity):
             pid = getattr(self._handler, "pid_controller", None)
             if pid is not None:
                 pid.setpoint = temp
+            # Persist setpoint_default to config entry options
+            params = self._handler.config.setdefault(
+                "control", {}
+            ).setdefault("params", {})
+            params["setpoint_default"] = temp
+            from .pid_entities import _persist_control_config
+
+            _persist_control_config(self.hass, self._handler)
             self.async_write_ha_state()
 
     async def async_set_hvac_mode(self, hvac_mode: HVACMode) -> None:
