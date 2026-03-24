@@ -95,6 +95,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # Create building device handlers from persisted config
     _setup_building_devices(hass, entry, coordinator)
 
+    # Start PID controllers for building devices
+    await _start_pid_controllers(hass, entry)
+
+    # Create MQTT publisher (before platform setup so entities can reference it)
+    _create_mqtt_publisher(hass, entry)
+
     # Forward setup to all platforms (including building device platforms)
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
@@ -105,10 +111,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     await _async_install_frontend_resource(hass)
     await _async_register_card(hass)
 
-    # Start PID controllers for building devices
-    await _start_pid_controllers(hass, entry)
-
-    # Start MQTT publisher if configured
+    # Connect and start the MQTT publisher (after platforms are set up)
     await _start_mqtt_publisher(hass, entry)
 
     # Listen for option changes
@@ -255,10 +258,15 @@ async def _start_pid_controllers(
     hub_data["pid_tasks"] = pid_tasks
 
 
-async def _start_mqtt_publisher(
+def _create_mqtt_publisher(
     hass: HomeAssistant, entry: ConfigEntry
 ) -> None:
-    """Start the MQTT publisher if configured and enabled."""
+    """Create the MQTT publisher instance (not yet connected).
+
+    The publisher is stored in hub_data so that platform setup can
+    reference it for status entities.  Connection happens later in
+    _start_mqtt_publisher().
+    """
     mqtt_conf = entry.options.get(CONF_MQTT, {})
     if not mqtt_conf.get(CONF_MQTT_ENABLED):
         return
@@ -291,8 +299,20 @@ async def _start_mqtt_publisher(
         handlers=handlers,
     )
 
-    await publisher.async_start()
     hub_data["mqtt_publisher"] = publisher
+    _LOGGER.debug("MQTT publisher created for %s (not yet connected)", entry.title)
+
+
+async def _start_mqtt_publisher(
+    hass: HomeAssistant, entry: ConfigEntry
+) -> None:
+    """Connect and start the MQTT publisher if it was created."""
+    hub_data = hass.data[DOMAIN][entry.entry_id]
+    publisher = hub_data.get("mqtt_publisher")
+    if publisher is None:
+        return
+
+    await publisher.async_start()
     _LOGGER.info("MQTT publisher started for %s", entry.title)
 
 
