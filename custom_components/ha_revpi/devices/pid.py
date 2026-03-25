@@ -84,10 +84,20 @@ class PIDController:
         # Proportional
         p_term = self.params.kp * error
 
-        # Integral with anti-windup
+        # Integral with clamping anti-windup
         if self.params.ti > 0:
             self._integral += error * dt
-            i_term = (self.params.kp / self.params.ti) * self._integral
+            ki = self.params.kp / self.params.ti
+
+            # Clamp integral so it cannot push output beyond limits
+            # on its own.  This prevents windup accumulation during
+            # sustained saturation.
+            if ki > 0:
+                i_max = (self.params.output_max - p_term) / ki
+                i_min = (self.params.output_min - p_term) / ki
+                self._integral = max(min(self._integral, i_max), i_min)
+
+            i_term = ki * self._integral
         else:
             i_term = 0.0
 
@@ -107,13 +117,6 @@ class PIDController:
             self.params.output_min,
             min(self.params.output_max, output),
         )
-
-        # Anti-windup: undo last integral step if output is saturated
-        if (
-            output == self.params.output_max
-            or output == self.params.output_min
-        ):
-            self._integral -= error * dt
 
         self._prev_error = error
         self._prev_time = now
