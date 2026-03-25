@@ -75,14 +75,19 @@ The `config.rsc` file name and location should be filled in (how you saved the f
 
 All entities can be used as normal in Home Assistant in any way you like.
 
-## Using the Home Assistant Lovelace card.
-The card is automatically installed and can be used on your dashboard.<br>
-When adding the card select the installed device in the visual setup of adding the card.<br>
-You can choose all found devices and the card will show that information. The card is specific to a module.
+## Using the Home Assistant Lovelace cards.
+The cards are automatically installed and can be used on your dashboard.<br>
+There are current 2 cards you can choose from:<br>
+1. the module card. (Showing status of revpi modules configured)<br>
+2. the device card. (Showing the additional configured equipment/devices via templates).<br>
+
+When adding one of the cards, select the installed device in the visual setup of adding the card.<br>
+You can choose all found devices and the card will show that information.<br>
 
 <p align="center">
   <img src="https://github.com/partach/ha_revpi/blob/main/pictures/revpi-card.png" width="500"/>
-  <br><em>Dashboard example</em>
+  <img src="https://github.com/partach/ha_revpi/blob/main/pictures/revpi-device-card.png" width="240"/>
+  <br><em>Dashboard revpi modules and equipment example</em>
 </p>
 
 The card is interactive so you can also change values here (depending on how you setup the module in PiCtory)<br>
