@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from collections.abc import Callable
 from typing import TYPE_CHECKING, Any
@@ -11,12 +12,19 @@ if TYPE_CHECKING:
 
 _LOGGER = logging.getLogger(__name__)
 
+# Reconnect backoff: 2, 4, 8, 16, 30, 30, 30, ... seconds
+_INITIAL_BACKOFF = 2
+_MAX_BACKOFF = 30
+
 
 class MQTTClient:
     """Thin wrapper around paho-mqtt for async usage via HA executor.
 
     The paho-mqtt library is imported lazily inside executor-run methods
     to avoid blocking I/O in the event loop (reading dist-info metadata).
+
+    Self-healing: if the initial connection fails or the connection drops,
+    a background task retries with exponential backoff until connected.
     """
 
     def __init__(
@@ -36,6 +44,8 @@ class MQTTClient:
         self._client: Any = None
         self._connected = False
         self._message_callback: Callable[[str, str], None] | None = None
+        self._reconnect_task: asyncio.Task | None = None
+        self._stopped = False
 
     def _on_connect(
         self,
@@ -67,7 +77,7 @@ class MQTTClient:
     ) -> None:
         """Handle disconnection callback."""
         self._connected = False
-        _LOGGER.info("MQTT disconnected from %s:%s", self._broker, self._port)
+        _LOGGER.warning("MQTT disconnected from %s:%s", self._broker, self._port)
 
     def _on_message(
         self,
@@ -124,6 +134,17 @@ class MQTTClient:
         self._client.connect(self._broker, self._port, keepalive=60)
         self._client.loop_start()
 
+    def _try_connect(self) -> bool:
+        """Attempt to connect. Returns True on success, False on failure."""
+        try:
+            self._ensure_client()
+            self._client.connect(self._broker, self._port, keepalive=60)
+            self._client.loop_start()
+            return True
+        except OSError as exc:
+            _LOGGER.debug("MQTT connect attempt failed: %s", exc)
+            return False
+
     def _disconnect(self) -> None:
         """Stop the network loop and disconnect (blocking, runs in executor)."""
         if self._client is None:
@@ -133,11 +154,51 @@ class MQTTClient:
         self._connected = False
 
     async def async_connect(self, hass: HomeAssistant) -> None:
-        """Connect in the executor."""
-        await hass.async_add_executor_job(self._connect)
+        """Connect in the executor, with background retry on failure."""
+        self._stopped = False
+        success = await hass.async_add_executor_job(self._try_connect)
+        if not success:
+            _LOGGER.warning(
+                "MQTT initial connection to %s:%s failed, will retry in background",
+                self._broker,
+                self._port,
+            )
+            self._start_reconnect_loop(hass)
+
+    def _start_reconnect_loop(self, hass: HomeAssistant) -> None:
+        """Start a background reconnect task if not already running."""
+        if self._reconnect_task is not None and not self._reconnect_task.done():
+            return
+        self._reconnect_task = hass.async_create_background_task(
+            self._reconnect_loop(hass),
+            "mqtt_reconnect",
+        )
+
+    async def _reconnect_loop(self, hass: HomeAssistant) -> None:
+        """Retry connecting with exponential backoff."""
+        backoff = _INITIAL_BACKOFF
+        while not self._stopped:
+            _LOGGER.info(
+                "MQTT reconnecting to %s:%s in %ds",
+                self._broker,
+                self._port,
+                backoff,
+            )
+            await asyncio.sleep(backoff)
+            if self._stopped:
+                break
+            success = await hass.async_add_executor_job(self._try_connect)
+            if success:
+                _LOGGER.info("MQTT reconnect successful")
+                return
+            backoff = min(backoff * 2, _MAX_BACKOFF)
 
     async def async_disconnect(self, hass: HomeAssistant) -> None:
-        """Disconnect in the executor."""
+        """Disconnect and cancel any reconnect task."""
+        self._stopped = True
+        if self._reconnect_task is not None and not self._reconnect_task.done():
+            self._reconnect_task.cancel()
+            self._reconnect_task = None
         await hass.async_add_executor_job(self._disconnect)
 
     def publish(
