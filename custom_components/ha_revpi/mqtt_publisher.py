@@ -98,16 +98,20 @@ class MQTTPublisher:
 
     async def async_start(self) -> None:
         """Connect the client and register as coordinator listener."""
-        try:
-            await self._client.async_connect(self._hass)
-        except Exception:
-            _LOGGER.exception("Failed to connect MQTT client")
-            return
+        # Always register the listener — _on_update checks is_connected
+        # before publishing, so it's safe even if MQTT isn't ready yet.
         self._unsub = self._coordinator.async_add_listener(self._on_update)
+
+        # Connect (will retry in background if broker is unreachable)
+        await self._client.async_connect(self._hass)
 
         # Set up subscriptions for external setpoints if enabled
         if self._allow_external_setpoints and self._publish_devices:
-            await self._setup_subscriptions()
+            if self._client.is_connected:
+                await self._setup_subscriptions()
+            else:
+                # Subscriptions will be set up when connection succeeds
+                self._pending_subscriptions = True
 
         _LOGGER.info(
             "MQTT publisher started (topic=%s, interval=%ss, core=%s, devices=%s, subscribe=%s)",
@@ -137,6 +141,11 @@ class MQTTPublisher:
         """Called synchronously by the coordinator after each data refresh."""
         if not self._client.is_connected:
             return
+
+        # Set up subscriptions that were deferred until connection succeeded
+        if getattr(self, "_pending_subscriptions", False):
+            self._pending_subscriptions = False
+            self._hass.async_create_task(self._setup_subscriptions())
         now = time.monotonic()
         to_publish: list[tuple[str, str]] = []
 
