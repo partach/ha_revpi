@@ -1,5 +1,5 @@
 <p>&nbsp;</p>
-<figure class="image image_resized" style="width:71.63%;"><img src="/lbk_circuit.png"></figure>
+<figure class="image image_resized" style="width:50.63%;"><img src="https://github.com/partach/ha_revpi/blob/main/pictures/lbk circuit.png"></figure>
 <h3>Overall Layout</h3>
 <p>The diagram shows a <strong>dual-flow AHU</strong> with:</p>
 <ul>
