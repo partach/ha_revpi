@@ -1,0 +1,257 @@
+{
+  "schema_version": 1,
+  "name": "AHU Dual Flow",
+  "type": "ahu",
+  "manufacturer": "",
+  "model": "",
+  "description": "Dual-flow AHU with heat recovery wheel, heating coil, cooling section, supply + exhaust fans, heating pump, fire damper, and multiple temperature/pressure sensors",
+
+  "ios": {
+    "outdoor_temp": {
+      "io_name": "AI_OUTDOOR_TEMP",
+      "role": "outdoor_temperature",
+      "direction": "input",
+      "data_type": "analog",
+      "transform": {
+        "type": "linear",
+        "input_min": 0,
+        "input_max": 10000,
+        "output_min": -30.0,
+        "output_max": 50.0,
+        "unit": "°C",
+        "precision": 1
+      },
+      "description": "1: Outdoor air temperature sensor (0-10V = -30..+50°C)"
+    },
+    "supply_filter_alarm": {
+      "io_name": "DI_SUPPLY_FILTER_DP",
+      "role": "filter_alarm",
+      "direction": "input",
+      "data_type": "bool",
+      "description": "2: Supply filter differential pressure alarm (dP switch)"
+    },
+    "pre_heater_temp": {
+      "io_name": "AI_PRE_HEATER_TEMP",
+      "role": "pre_heater_temperature",
+      "direction": "input",
+      "data_type": "analog",
+      "transform": {
+        "type": "linear",
+        "input_min": 0,
+        "input_max": 10000,
+        "output_min": -20.0,
+        "output_max": 80.0,
+        "unit": "°C",
+        "precision": 1
+      },
+      "description": "4: Temperature before heating coil (after heat wheel)"
+    },
+    "post_heater_temp": {
+      "io_name": "AI_POST_HEATER_TEMP",
+      "role": "post_heater_temperature",
+      "direction": "input",
+      "data_type": "analog",
+      "transform": {
+        "type": "linear",
+        "input_min": 0,
+        "input_max": 10000,
+        "output_min": -20.0,
+        "output_max": 80.0,
+        "unit": "°C",
+        "precision": 1
+      },
+      "description": "5: Temperature after heating coil"
+    },
+    "heating_pump": {
+      "io_name": "DO_HEATING_PUMP",
+      "role": "pump_command",
+      "direction": "output",
+      "data_type": "bool",
+      "description": "6: Heating coil circulation pump on/off"
+    },
+    "heating_valve": {
+      "io_name": "AO_HEATING_VALVE",
+      "role": "heating_valve",
+      "direction": "output",
+      "data_type": "analog",
+      "transform": {
+        "type": "linear",
+        "input_min": 0,
+        "input_max": 10000,
+        "output_min": 0.0,
+        "output_max": 100.0,
+        "unit": "%",
+        "precision": 1
+      },
+      "description": "7: Heating coil valve (0-10V = 0-100% open)"
+    },
+    "supply_fan_command": {
+      "io_name": "DO_SUPPLY_FAN",
+      "role": "fan_command",
+      "direction": "output",
+      "data_type": "bool",
+      "description": "8: Supply fan start/stop"
+    },
+    "supply_fan_status": {
+      "io_name": "DI_SUPPLY_FAN_FB",
+      "role": "fan_status",
+      "direction": "input",
+      "data_type": "bool",
+      "description": "8: Supply fan running feedback"
+    },
+    "cooling_valve": {
+      "io_name": "AO_COOLING_VALVE",
+      "role": "cooling_valve",
+      "direction": "output",
+      "data_type": "analog",
+      "transform": {
+        "type": "linear",
+        "input_min": 0,
+        "input_max": 10000,
+        "output_min": 0.0,
+        "output_max": 100.0,
+        "unit": "%",
+        "precision": 1
+      },
+      "description": "9: Cooling section valve (0-10V = 0-100% open)"
+    },
+    "supply_temp": {
+      "io_name": "AI_SUPPLY_TEMP",
+      "role": "current_temperature",
+      "direction": "input",
+      "data_type": "analog",
+      "transform": {
+        "type": "linear",
+        "input_min": 0,
+        "input_max": 10000,
+        "output_min": -20.0,
+        "output_max": 80.0,
+        "unit": "°C",
+        "precision": 1
+      },
+      "description": "10: Supply air temperature going into building (0-10V = -20..+80°C)"
+    },
+    "supply_pressure": {
+      "io_name": "AI_SUPPLY_PRESSURE",
+      "role": "supply_pressure",
+      "direction": "input",
+      "data_type": "analog",
+      "transform": {
+        "type": "linear",
+        "input_min": 0,
+        "input_max": 10000,
+        "output_min": 0.0,
+        "output_max": 1000.0,
+        "unit": "Pa",
+        "precision": 0
+      },
+      "description": "11: Supply duct pressure sensor (0-10V = 0-1000Pa)"
+    },
+    "fire_damper": {
+      "io_name": "DO_FIRE_DAMPER",
+      "role": "fire_damper",
+      "direction": "output",
+      "data_type": "bool",
+      "description": "12: Fire damper open/close (energized = open)"
+    },
+    "return_pressure": {
+      "io_name": "AI_RETURN_PRESSURE",
+      "role": "return_pressure",
+      "direction": "input",
+      "data_type": "analog",
+      "transform": {
+        "type": "linear",
+        "input_min": 0,
+        "input_max": 10000,
+        "output_min": 0.0,
+        "output_max": 1000.0,
+        "unit": "Pa",
+        "precision": 0
+      },
+      "description": "13: Return duct pressure sensor (0-10V = 0-1000Pa)"
+    },
+    "return_temp": {
+      "io_name": "AI_RETURN_TEMP",
+      "role": "return_temperature",
+      "direction": "input",
+      "data_type": "analog",
+      "transform": {
+        "type": "linear",
+        "input_min": 0,
+        "input_max": 10000,
+        "output_min": -20.0,
+        "output_max": 80.0,
+        "unit": "°C",
+        "precision": 1
+      },
+      "description": "14: Return air temperature from building"
+    },
+    "exhaust_filter_alarm": {
+      "io_name": "DI_EXHAUST_FILTER_DP",
+      "role": "exhaust_filter_alarm",
+      "direction": "input",
+      "data_type": "bool",
+      "description": "15: Exhaust filter differential pressure alarm (dP switch)"
+    },
+    "exhaust_fan_command": {
+      "io_name": "DO_EXHAUST_FAN",
+      "role": "exhaust_fan_command",
+      "direction": "output",
+      "data_type": "bool",
+      "description": "16: Exhaust fan start/stop"
+    },
+    "exhaust_fan_status": {
+      "io_name": "DI_EXHAUST_FAN_FB",
+      "role": "exhaust_fan_status",
+      "direction": "input",
+      "data_type": "bool",
+      "description": "16: Exhaust fan running feedback"
+    },
+    "damper_position": {
+      "io_name": "AO_FRESH_AIR_DAMPER",
+      "role": "damper_position",
+      "direction": "output",
+      "data_type": "analog",
+      "transform": {
+        "type": "linear",
+        "input_min": 0,
+        "input_max": 10000,
+        "output_min": 0.0,
+        "output_max": 100.0,
+        "unit": "%",
+        "precision": 0
+      },
+      "description": "17: Fresh air intake damper (0-10V = 0-100% open)"
+    },
+    "frost_alarm": {
+      "io_name": "DI_FROST_ALARM",
+      "role": "frost_alarm",
+      "direction": "input",
+      "data_type": "bool",
+      "description": "Frost protection alarm (thermostat on heating coil return)"
+    },
+    "fire_alarm": {
+      "io_name": "DI_FIRE_ALARM",
+      "role": "fire_alarm",
+      "direction": "input",
+      "data_type": "bool",
+      "description": "19: Fire alarm input from building fire system"
+    }
+  },
+
+  "control": {
+    "type": "pid",
+    "enabled": false,
+    "params": {
+      "kp": 3.0,
+      "ti": 180,
+      "td": 0,
+      "setpoint_default": 21.0,
+      "output_min": 0.0,
+      "output_max": 100.0
+    },
+    "sample_interval": 1.0,
+    "input_role": "current_temperature",
+    "output_role": "heating_valve"
+  }
+}

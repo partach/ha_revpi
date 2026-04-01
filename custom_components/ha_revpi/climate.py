@@ -86,6 +86,12 @@ class RevPiBuildingClimate(CoordinatorEntity, ClimateEntity, RestoreEntity):
         self._heating_valve_mapping = handler.get_io_by_role("heating_valve")
         self._cooling_valve_mapping = handler.get_io_by_role("cooling_valve")
 
+        # Auxiliary outputs that follow mode changes
+        self._exhaust_fan_mapping = handler.get_io_by_role("exhaust_fan_command")
+        self._pump_mapping = handler.get_io_by_role("pump_command")
+        self._fire_damper_mapping = handler.get_io_by_role("fire_damper")
+        self._damper_mapping = handler.get_io_by_role("damper_position")
+
         # Expose COOL mode only when a cooling valve is configured
         self._attr_hvac_modes = (
             _HEAT_COOL_MODES if self._cooling_valve_mapping else _HEAT_ONLY_MODES
@@ -198,46 +204,47 @@ class RevPiBuildingClimate(CoordinatorEntity, ClimateEntity, RestoreEntity):
             _persist_control_config(self.hass, self._handler)
             self.async_write_ha_state()
 
+    async def _write_if(self, mapping, value) -> None:
+        """Write to an IO mapping if it exists."""
+        if mapping:
+            await self._handler.write_io_engineering(mapping, value)
+
     async def async_set_hvac_mode(self, hvac_mode: HVACMode) -> None:
-        """Set HVAC mode (off/heat/cool/auto)."""
+        """Set HVAC mode (off/heat/cool/auto).
+
+        Controls supply fan, exhaust fan, heating pump, fire damper,
+        damper position, and valves according to the selected mode.
+        """
         self._hvac_mode = hvac_mode
+        is_on = hvac_mode != HVACMode.OFF
+
+        # Fans: both supply and exhaust follow the mode
+        await self._write_if(self._fan_cmd_mapping, is_on)
+        await self._write_if(self._exhaust_fan_mapping, is_on)
+
+        # Fire damper: open when running, closed when off
+        await self._write_if(self._fire_damper_mapping, is_on)
+
+        # Damper: open when running, closed when off
+        if self._damper_mapping:
+            await self._handler.write_io_engineering(
+                self._damper_mapping, 100.0 if is_on else 0.0
+            )
 
         if hvac_mode == HVACMode.OFF:
-            if self._fan_cmd_mapping:
-                await self._handler.write_io_engineering(
-                    self._fan_cmd_mapping, False
-                )
-            if self._heating_valve_mapping:
-                await self._handler.write_io_engineering(
-                    self._heating_valve_mapping, 0.0
-                )
-            if self._cooling_valve_mapping:
-                await self._handler.write_io_engineering(
-                    self._cooling_valve_mapping, 0.0
-                )
+            await self._write_if(self._heating_valve_mapping, 0.0)
+            await self._write_if(self._cooling_valve_mapping, 0.0)
+            await self._write_if(self._pump_mapping, False)
         elif hvac_mode == HVACMode.HEAT:
-            if self._fan_cmd_mapping:
-                await self._handler.write_io_engineering(
-                    self._fan_cmd_mapping, True
-                )
-            if self._cooling_valve_mapping:
-                await self._handler.write_io_engineering(
-                    self._cooling_valve_mapping, 0.0
-                )
+            await self._write_if(self._cooling_valve_mapping, 0.0)
+            # Pump on for heating (hot water circulation)
+            await self._write_if(self._pump_mapping, True)
         elif hvac_mode == HVACMode.COOL:
-            if self._fan_cmd_mapping:
-                await self._handler.write_io_engineering(
-                    self._fan_cmd_mapping, True
-                )
-            if self._heating_valve_mapping:
-                await self._handler.write_io_engineering(
-                    self._heating_valve_mapping, 0.0
-                )
+            await self._write_if(self._heating_valve_mapping, 0.0)
+            await self._write_if(self._pump_mapping, False)
         elif hvac_mode == HVACMode.AUTO:
-            if self._fan_cmd_mapping:
-                await self._handler.write_io_engineering(
-                    self._fan_cmd_mapping, True
-                )
+            # In AUTO, pump follows heating demand (PID will control valve)
+            await self._write_if(self._pump_mapping, True)
 
         self.async_write_ha_state()
 
